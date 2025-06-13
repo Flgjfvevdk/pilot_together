@@ -3,13 +3,15 @@ from flask_socketio import SocketIO, emit
 import socket
 import logging
 import tkinter as tk
-from tkinter import ttk
 import threading
 import time
 from game import Game
+from game_manager_window import GameManagerWindow
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
+# Filter out werkzeug polling logs
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -18,66 +20,6 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Create the game instance
 game = Game(socketio)
-
-# Game Manager Window class
-class GameManagerWindow:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Pilot Together - Game Manager")
-        self.root.geometry("500x400")
-        self.root.configure(bg="#1a1a2e")
-        
-        # Create header
-        header_frame = tk.Frame(root, bg="#1a1a2e")
-        header_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        title_label = tk.Label(header_frame, text="Game Manager", font=("Arial", 16, "bold"), 
-                              bg="#1a1a2e", fg="#7ab5ff")
-        title_label.pack()
-        
-        # Create player list frame
-        player_frame = tk.Frame(root, bg="#252544")
-        player_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        player_header = tk.Label(player_frame, text="Connected Players", font=("Arial", 12), 
-                              bg="#252544", fg="#eee")
-        player_header.pack(pady=5)
-        
-        # Create Treeview for player list
-        self.player_tree = ttk.Treeview(player_frame, columns=("ID", "Name"), show="headings")
-        self.player_tree.heading("ID", text="ID")
-        self.player_tree.heading("Name", text="Player Name")
-        self.player_tree.column("ID", width=150)
-        self.player_tree.column("Name", width=250)
-        self.player_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Create status bar
-        status_frame = tk.Frame(root, bg="#1a1a2e")
-        status_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=10, pady=5)
-        
-        self.status_label = tk.Label(status_frame, text="Server starting...", 
-                                   bg="#1a1a2e", fg="#eee")
-        self.status_label.pack(side=tk.LEFT)
-        
-        # Configure style for Treeview
-        style = ttk.Style()
-        style.configure("Treeview", 
-                      background="#252544", 
-                      foreground="#eee", 
-                      fieldbackground="#252544")
-        style.map('Treeview', background=[('selected', '#3a70d1')])
-        
-    def update_player_list(self, players):
-        # Clear the current list
-        for item in self.player_tree.get_children():
-            self.player_tree.delete(item)
-        
-        # Add all players from the list
-        for player in players:
-            self.player_tree.insert('', tk.END, values=(player['id'][:8]+"...", player['name']))
-    
-    def update_status(self, status_text):
-        self.status_label.config(text=status_text)
 
 # Global variable for game manager window
 game_manager = None
@@ -183,6 +125,7 @@ if __name__ == '__main__':
     # Create and start the Tkinter window
     root = tk.Tk()
     game_manager = GameManagerWindow(root)
+    game_manager.set_game(game)  # Pass the game instance to the window
     game_manager.update_status(f"Server running at http://{local_ip}:{port}")
     
     # Start the game

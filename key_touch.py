@@ -1,20 +1,22 @@
+from typing import Dict, Optional, Any
+
 class KeyTouch:
     """
     Represents a keyboard key that can be pressed or released.
     Used to track player input state.
     """
-    def __init__(self, key_name):
+    def __init__(self, key_name: str):
         """
         Initialize a new key touch.
         
         Args:
             key_name (str): The name/identifier of the key
         """
-        self.key_name = key_name
-        self.is_pressed = False
-        self.last_pressed = 0  # Timestamp of last press
+        self.key_name: str = key_name
+        self.is_pressed: bool = False
+        self.last_pressed: float = 0  # Timestamp of last press
     
-    def press(self, timestamp=None):
+    def press(self, timestamp: Optional[float] = None) -> bool:
         """
         Mark the key as pressed.
         
@@ -30,7 +32,7 @@ class KeyTouch:
             return True
         return False
     
-    def release(self):
+    def release(self) -> bool:
         """
         Mark the key as released.
         
@@ -42,7 +44,7 @@ class KeyTouch:
             return True
         return False
     
-    def is_active(self):
+    def is_active(self) -> bool:
         """
         Check if the key is currently pressed.
         
@@ -51,7 +53,7 @@ class KeyTouch:
         """
         return self.is_pressed
     
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         """
         Convert the key state to a dictionary.
         

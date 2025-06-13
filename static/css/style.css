@@ -103,12 +103,17 @@ button:hover {
 .game-board {
     margin: 20px 0;
     position: relative;
-    height: 350px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 #spaceshipContainer {
     width: 100%;
-    height: 250px;
+    max-width: 500px; /* Limitation de la largeur maximale */
+    aspect-ratio: 1/1; /* Garantit un ratio carré pour les navigateurs modernes */
     background-color: #0a0a18;
     border: 2px solid #3a70d1;
     border-radius: 8px;
@@ -116,9 +121,17 @@ button:hover {
     overflow: hidden;
 }
 
+/* Solution de secours pour les navigateurs ne supportant pas aspect-ratio */
+@supports not (aspect-ratio: 1/1) {
+    #spaceshipContainer {
+        height: 0;
+        padding-bottom: 100%; /* Crée un carré parfait via padding */
+    }
+}
+
 #spaceship {
-    width: 40px;
-    height: 40px;
+    width: 8%; /* Taille relative au conteneur plutôt que des pixels fixes */
+    height: 8%; /* 8% du conteneur au lieu de 40px fixes */
     background-image: url('../img/spaceship.png');
     background-size: contain;
     background-repeat: no-repeat;
@@ -135,18 +148,24 @@ button:hover {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 1%;
+    width: 100%;
+    max-width: 300px;
 }
 
 .control-row {
     display: flex;
-    gap: 10px;
+    gap: 5%;
+    width: 100%;
+    justify-content: center;
 }
 
 .control-btn {
-    width: 60px;
-    height: 60px;
-    font-size: 24px;
+    width: 20%;  /* Taille relative à la rangée */
+    aspect-ratio: 1/1; /* Garder les boutons carrés */
+    min-width: 40px;
+    max-width: 70px;
+    font-size: clamp(18px, 4vw, 24px); /* Police adaptative */
     background-color: #1a1a2e;
     border: 2px solid #3a70d1;
     color: #7ab5ff;

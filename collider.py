@@ -1,5 +1,6 @@
 import math
 from vector import Vector
+from typing import List, Dict, Tuple, Optional
 
 class Collider:
     """
@@ -7,7 +8,7 @@ class Collider:
     Currently implements a rotatable rectangle collider.
     """
     
-    def __init__(self, width=0, height=0, offset_x=0, offset_y=0, angle=0):
+    def __init__(self, width: float = 0, height: float = 0, offset_x: float = 0, offset_y: float = 0, angle: float = 0):
         """
         Initialize a new Collider.
         
@@ -18,12 +19,12 @@ class Collider:
             offset_y (float): Y offset from the object's position
             angle (float): Rotation angle in radians
         """
-        self.width = width
-        self.height = height
-        self.offset = Vector(offset_x, offset_y)
-        self.angle = angle  # Rotation in radians
+        self.width: float = width
+        self.height: float = height
+        self.offset: Vector = Vector(offset_x, offset_y)
+        self.angle: float = angle  # Rotation in radians
         
-    def get_corners(self, position):
+    def get_corners(self, position: Vector) -> List[Vector]:
         """
         Get the four corners of the collider based on a given position.
         
@@ -34,12 +35,12 @@ class Collider:
             list: Four Vector objects representing the corners
         """
         # Calculate the center of the collider
-        center = position + self.offset
+        center: Vector = position + self.offset
         
         # Calculate the four corners relative to the center (before rotation)
-        half_w = self.width / 2
-        half_h = self.height / 2
-        corners = [
+        half_w: float = self.width / 2
+        half_h: float = self.height / 2
+        corners: List[Vector] = [
             Vector(-half_w, -half_h),  # Top-left
             Vector(half_w, -half_h),   # Top-right
             Vector(half_w, half_h),    # Bottom-right
@@ -47,15 +48,15 @@ class Collider:
         ]
         
         # Apply rotation to each corner and translate to world position
-        rotated_corners = []
+        rotated_corners: List[Vector] = []
         for corner in corners:
-            rotated = corner.rotate(self.angle)
-            world_corner = center + rotated
+            rotated: Vector = corner.rotate(self.angle)
+            world_corner: Vector = center + rotated
             rotated_corners.append(world_corner)
             
         return rotated_corners
     
-    def intersects(self, other, my_pos, other_pos):
+    def intersects(self, other: 'Collider', my_pos: Vector, other_pos: Vector) -> bool:
         """
         Check if this collider intersects with another collider.
         Uses the Separating Axis Theorem (SAT) for rotated rectangles.
@@ -73,39 +74,41 @@ class Collider:
             return False
             
         # Get the corners of both colliders
-        corners_a = self.get_corners(my_pos)
-        corners_b = other.get_corners(other_pos)
+        corners_a: List[Vector] = self.get_corners(my_pos)
+        corners_b: List[Vector] = other.get_corners(other_pos)
         
         # Get the axes to test (perpendicular to each side)
-        axes = []
+        axes: List[Vector] = []
         
         # Axes from this collider
         for i in range(len(corners_a)):
-            edge = corners_a[(i + 1) % len(corners_a)] - corners_a[i]
-            normal = Vector(-edge.y, edge.x).normalize()
+            edge: Vector = corners_a[(i + 1) % len(corners_a)] - corners_a[i]
+            normal: Vector = Vector(-edge.y, edge.x).normalize()
             axes.append(normal)
             
         # Axes from other collider
         for i in range(len(corners_b)):
-            edge = corners_b[(i + 1) % len(corners_b)] - corners_b[i]
-            normal = Vector(-edge.y, edge.x).normalize()
+            edge: Vector = corners_b[(i + 1) % len(corners_b)] - corners_b[i]
+            normal: Vector = Vector(-edge.y, edge.x).normalize()
             axes.append(normal)
         
         # Test projection overlap on each axis
         for axis in axes:
             # Project both colliders onto the axis
-            min_a, max_a = float('inf'), float('-inf')
-            min_b, max_b = float('inf'), float('-inf')
+            min_a: float = float('inf')
+            max_a: float = float('-inf')
+            min_b: float = float('inf')
+            max_b: float = float('-inf')
             
             # Project first collider
             for corner in corners_a:
-                projection = axis.dot(corner)
+                projection: float = axis.dot(corner)
                 min_a = min(min_a, projection)
                 max_a = max(max_a, projection)
                 
             # Project second collider
             for corner in corners_b:
-                projection = axis.dot(corner)
+                projection: float = axis.dot(corner)
                 min_b = min(min_b, projection)
                 max_b = max(max_b, projection)
             
@@ -117,7 +120,7 @@ class Collider:
         # No separating axis found, objects collide
         return True
     
-    def contains_point(self, point, position):
+    def contains_point(self, point: Vector, position: Vector) -> bool:
         """
         Check if a point is inside the collider.
         
@@ -129,13 +132,13 @@ class Collider:
             bool: True if the point is inside the collider, False otherwise
         """
         # Get corners
-        corners = self.get_corners(position)
+        corners: List[Vector] = self.get_corners(position)
         
         # For each edge of the polygon
         for i in range(len(corners)):
-            edge = corners[(i + 1) % len(corners)] - corners[i]
+            edge: Vector = corners[(i + 1) % len(corners)] - corners[i]
             # Vector from corner to point
-            to_point = point - corners[i]
+            to_point: Vector = point - corners[i]
             
             # Cross product will be negative if point is to the right of the edge
             if edge.x * to_point.y - edge.y * to_point.x < 0:
@@ -143,7 +146,7 @@ class Collider:
                 
         return True
     
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         """
         Convert the collider to a dictionary for serialization.
         

@@ -7,8 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const playersList = document.getElementById('playersList');
     const connectionStatus = document.getElementById('connectionStatus');
     const gameStatus = document.getElementById('gameStatus');
-    const spaceship = document.getElementById('spaceship');
     const spaceshipContainer = document.getElementById('spaceshipContainer');
+    
+    // La référence au vaisseau - maintenir une seule référence
+    const spaceship = document.getElementById('spaceship');
+    if (spaceship) {
+        spaceship.classList.add('game-object');
+    }
     
     // Control buttons
     const upBtn = document.getElementById('upBtn');
@@ -134,75 +139,124 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateGameState(newState) {
         gameState = newState;
         
-        // Update spaceship
-        if (spaceship) {
-            spaceship.style.left = `${gameState.shipX}%`;
-            spaceship.style.top = `${gameState.shipY}%`;
-            
-            // Apply image properties if they exist
-            if (gameState.image) {
-                spaceship.style.width = `${gameState.image.width}px`;
-                spaceship.style.height = `${gameState.image.height}px`;
-                spaceship.style.backgroundImage = `url(${gameState.image.url})`;
-                spaceship.style.backgroundSize = 'contain';
-                spaceship.style.backgroundRepeat = 'no-repeat';
-                spaceship.style.backgroundPosition = 'center';
-                spaceship.style.transform = `translate(-50%, -50%) rotate(${gameState.image.angle}rad)`;
-                spaceship.style.opacity = gameState.image.opacity;
-            }
+        // Rassembler tous les objets du jeu pour un traitement uniforme
+        let allGameObjects = [];
+        
+        // Convertir les données du vaisseau en un format d'objet standard
+        if (gameState.hasOwnProperty('shipX') && gameState.hasOwnProperty('shipY')) {
+            const shipObject = {
+                id: 'spaceship',
+                x: gameState.shipX,
+                y: gameState.shipY,
+                width: gameState.width || 40,
+                height: gameState.height || 40,
+                active: true,
+                image: gameState.image || {
+                    url: '/static/img/spaceship.png',
+                    width: 8, // Pourcentage par défaut
+                    height: 8, // Pourcentage par défaut
+                    useRelativeSize: true,
+                    angle: 0,
+                    opacity: 1
+                }
+            };
+            allGameObjects.push(shipObject);
         }
         
-        // If we have game objects with images, render them
-        if (gameState.gameObjects) {
-            renderGameObjects(gameState.gameObjects);
+        // Ajouter les autres objets de jeu
+        if (gameState.gameObjects && Array.isArray(gameState.gameObjects)) {
+            allGameObjects = allGameObjects.concat(gameState.gameObjects);
         }
+        
+        // Rendre tous les objets avec une approche unifiée
+        renderGameObjects(allGameObjects);
     }
     
     // Render all game objects
     function renderGameObjects(objects) {
-        // Clear existing objects
-        const existingObjects = spaceshipContainer.querySelectorAll('.game-object');
-        existingObjects.forEach(obj => {
-            if (obj.id !== 'spaceship') { // Don't remove the main spaceship
-                obj.remove();
+        // Garder une référence aux objets existants pour éviter les recréations inutiles
+        const existingElements = {};
+        
+        // Identifier les éléments existants (sauf le spaceship qui est déjà dans le DOM)
+        const currentElements = spaceshipContainer.querySelectorAll('.game-object:not(#spaceship)');
+        currentElements.forEach(el => {
+            existingElements[el.id] = el;
+        });
+        
+        // Ajouter spaceship à la liste des éléments existants si disponible
+        if (spaceship) {
+            existingElements['spaceship'] = spaceship;
+        }
+        
+        // Liste des IDs d'objets rendus pour identifier ceux à supprimer plus tard
+        const renderedIds = new Set();
+        
+        // Créer ou mettre à jour les objets de jeu
+        objects.forEach(obj => {
+            // Ignorer les objets sans données correctes
+            if (!obj || !obj.hasOwnProperty('id')) return;
+            
+            let element;
+            let elementId;
+            
+            // Cas spécial pour le vaisseau - utiliser la référence existante
+            if (obj.id === 'spaceship') {
+                elementId = 'spaceship';
+                element = spaceship; // Utiliser la référence déjà capturée
+                if (!element) {
+                    console.error("Element with ID 'spaceship' not found in DOM");
+                    return;
+                }
+                renderedIds.add(elementId);
+            } else {
+                // Traitement normal pour les autres objets
+                elementId = `game-object-${obj.id}`;
+                renderedIds.add(elementId);
+                
+                element = document.getElementById(elementId);
+                if (!element) {
+                    // Créer un nouvel élément
+                    element = document.createElement('div');
+                    element.id = elementId;
+                    element.classList.add('game-object');
+                    spaceshipContainer.appendChild(element);
+                }
+            }
+            
+            // Définir la position
+            element.style.left = `${obj.x}%`;
+            element.style.top = `${obj.y}%`;
+            
+            // Appliquer les propriétés d'image si présentes
+            if (obj.image) {
+                // Utiliser des tailles relatives quand possible
+                const relativeWidth = obj.image.useRelativeSize ? obj.image.width : 8;
+                const relativeHeight = obj.image.useRelativeSize ? obj.image.height : 8;
+                
+                element.style.width = `${relativeWidth}%`;
+                element.style.height = `${relativeHeight}%`;
+                element.style.backgroundImage = `url(${obj.image.url})`;
+                element.style.backgroundSize = 'contain';
+                element.style.backgroundRepeat = 'no-repeat';
+                element.style.backgroundPosition = 'center';
+                element.style.transform = `translate(-50%, -50%) rotate(${obj.image.angle || 0}rad)`;
+                element.style.opacity = obj.image.opacity !== undefined ? obj.image.opacity : 1.0;
+            }
+            
+            // Visibilité basée sur l'état actif
+            element.style.display = obj.active !== false ? 'block' : 'none';
+            
+            // Debug : afficher les colliders si présents
+            if (obj.colliders && window.debugMode) {
+                renderCollider(element, obj.colliders);
             }
         });
         
-        // Create or update game objects
-        objects.forEach(obj => {
-            // Skip if no image to display
-            if (!obj.image) return;
-            
-            let element = document.getElementById(`game-object-${obj.id}`);
-            
-            // Create if doesn't exist
-            if (!element) {
-                element = document.createElement('div');
-                element.id = `game-object-${obj.id}`;
-                element.classList.add('game-object');
-                spaceshipContainer.appendChild(element);
-            }
-            
-            // Set position and size
-            element.style.left = `${obj.x}%`;
-            element.style.top = `${obj.y}%`;
-            element.style.width = `${obj.image.width}px`;
-            element.style.height = `${obj.image.height}px`;
-            
-            // Set image and transformation
-            element.style.backgroundImage = `url(${obj.image.url})`;
-            element.style.backgroundSize = 'contain';
-            element.style.backgroundRepeat = 'no-repeat';
-            element.style.backgroundPosition = 'center';
-            element.style.transform = `translate(-50%, -50%) rotate(${obj.image.angle}rad)`;
-            element.style.opacity = obj.image.opacity;
-            
-            // Set visibility based on active state
-            element.style.display = obj.active ? 'block' : 'none';
-            
-            // Debug: show colliders if present
-            if (obj.colliders && window.debugMode) {
-                renderCollider(element, obj.colliders);
+        // Supprimer les éléments qui ne sont plus présents dans les données
+        // Mais ne jamais supprimer l'élément spaceship original
+        currentElements.forEach(el => {
+            if (!renderedIds.has(el.id) && el.id !== 'spaceship') {
+                el.remove();
             }
         });
     }
@@ -301,15 +355,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         switch (e.key) {
             case 'ArrowUp':
+                e.preventDefault(); // Prevent page scrolling
                 handleKeyDown('up');
                 break;
             case 'ArrowDown':
+                e.preventDefault(); // Prevent page scrolling
                 handleKeyDown('down');
                 break;
             case 'ArrowLeft':
+                e.preventDefault(); // Prevent page scrolling
                 handleKeyDown('left');
                 break;
             case 'ArrowRight':
+                e.preventDefault(); // Prevent page scrolling
                 handleKeyDown('right');
                 break;
         }
@@ -320,15 +378,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         switch (e.key) {
             case 'ArrowUp':
+                e.preventDefault(); // Prevent page scrolling
                 handleKeyUp('up');
                 break;
             case 'ArrowDown':
+                e.preventDefault(); // Prevent page scrolling
                 handleKeyUp('down');
                 break;
             case 'ArrowLeft':
+                e.preventDefault(); // Prevent page scrolling
                 handleKeyUp('left');
                 break;
             case 'ArrowRight':
+                e.preventDefault(); // Prevent page scrolling
                 handleKeyUp('right');
                 break;
         }

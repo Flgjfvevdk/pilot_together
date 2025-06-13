@@ -4,6 +4,7 @@ import threading
 from spaceship import SpaceShip
 from key_touch import KeyTouch
 from game_objects import GameObject
+from typing import Dict, List, Optional, Any, Tuple, Union
 
 class Game:
     """
@@ -17,27 +18,32 @@ class Game:
             socketio: The SocketIO instance for emitting updates to clients
         """
         self.socketio = socketio
-        self.running:bool = False
-        self.update_thread = None
-        self.update_interval = 0.05  # 20 updates per second
+        self.running: bool = False
+        self.update_thread: Optional[threading.Thread] = None
+        self.update_interval: float = 0.05  # 20 updates per second
         
         # Game objects
-        self.spaceship:SpaceShip = SpaceShip()
-        self.game_objects:dict[str, GameObject] = {}  # Dictionary of game objects by ID
-        self.next_object_id = 1  # For generating unique object IDs
+        self.spaceship: SpaceShip = SpaceShip()
+        self.game_objects: Dict[str, GameObject] = {}  # Dictionary of game objects by ID
+        self.next_object_id: int = 1  # For generating unique object IDs
         
         # Add spaceship as a game object
         self.add_game_object(self.spaceship, "spaceship")
         
         # Player tracking
-        self.players:dict = {}  # player_id -> player data
-        self.player_keys:dict[int, dict[str, KeyTouch]] = {}  # player_id -> key states
+        self.players: Dict[str, Dict[str, Any]] = {}  # player_id -> player data
+        self.player_keys: Dict[str, Dict[str, KeyTouch]] = {}  # player_id -> key states
         
         # Game state
-        self.last_active_player = None
-        self.last_update_time = None
+        self.last_active_player: Optional[str] = None
+        self.last_update_time: Optional[float] = None
+
+        # Add Adversity manager as a game object
+        from adversity import Adversity
+        adversity_manager = Adversity(self)
+        self.add_game_object(adversity_manager, "adversity_manager")
         
-    def start(self):
+    def start(self) -> None:
         """Start the game loop in a separate thread"""
         if self.running:
             return
@@ -49,18 +55,18 @@ class Game:
         self.update_thread.start()
         logging.info("Game loop started")
         
-    def stop(self):
+    def stop(self) -> None:
         """Stop the game loop"""
         self.running = False
         if self.update_thread:
             self.update_thread.join(timeout=1.0)
             logging.info("Game loop stopped")
     
-    def _game_loop(self):
+    def _game_loop(self) -> None:
         """Main game update loop - runs in a separate thread"""
         while self.running:
-            current_time = time.time()
-            delta_time = current_time - self.last_update_time
+            current_time: float = time.time()
+            delta_time: float = current_time - self.last_update_time
             self.last_update_time = current_time
             
             # Update game state
@@ -69,7 +75,7 @@ class Game:
             # Sleep to maintain update frequency
             time.sleep(self.update_interval)
     
-    def add_game_object(self, obj, obj_id=None):
+    def add_game_object(self, obj: GameObject, obj_id: Optional[str] = None) -> str:
         """
         Add a game object to the game.
         
@@ -87,7 +93,7 @@ class Game:
         self.game_objects[obj_id] = obj
         return obj_id
     
-    def remove_game_object(self, obj_id):
+    def remove_game_object(self, obj_id: str) -> Optional[GameObject]:
         """
         Remove a game object from the game.
         
@@ -98,12 +104,12 @@ class Game:
             GameObject or None: The removed object if found
         """
         if obj_id in self.game_objects:
-            obj = self.game_objects[obj_id]
+            obj: GameObject = self.game_objects[obj_id]
             del self.game_objects[obj_id]
             return obj
         return None
     
-    def get_game_object(self, obj_id):
+    def get_game_object(self, obj_id: str) -> Optional[GameObject]:
         """
         Get a game object by ID.
         
@@ -115,7 +121,7 @@ class Game:
         """
         return self.game_objects.get(obj_id)
     
-    def update(self, delta_time):
+    def update(self, delta_time: float) -> None:
         """
         Update all game objects and process player input.
         
@@ -123,25 +129,36 @@ class Game:
             delta_time (float): Time elapsed since last update
         """
         # Process player inputs and update spaceship
-        ship_moved = self.spaceship.update(self.players, self.player_keys, delta_time)
+        ship_moved: bool = self.spaceship.update(self.players, self.player_keys, delta_time)
 
         # Update all other game objects
         for obj_id, obj in list(self.game_objects.items()):  # Use list to avoid modification during iteration
             if obj != self.spaceship:  # Skip spaceship as it's already updated
                 obj.update(self.players, self.player_keys, delta_time)
         
+        # Remove inactive game objects
+        self.cleanup_inactive_objects()
+
         # Check collisions between game objects
         self.check_collisions()
         
-        # Emit game state to clients if anything changed
-        if ship_moved and self.socketio:
-            game_state = self.get_state()
+        # Emit game state to clients at each update cycle, not just when ship moves
+        if self.socketio:
+            game_state: Dict[str, Any] = self.get_state()
             self.socketio.emit('game_state_update', game_state)
+
+    def cleanup_inactive_objects(self) -> None:
+        """
+        Remove inactive game objects from the game.
+        """
+        inactive_ids: List[str] = [obj_id for obj_id, obj in self.game_objects.items() if not obj.active]
+        for obj_id in inactive_ids:
+            self.remove_game_object(obj_id)
     
-    def check_collisions(self):
+    def check_collisions(self) -> None:
         """Check for collisions between game objects."""
         # Get list of objects with colliders
-        collider_objects = [(obj_id, obj) for obj_id, obj in self.game_objects.items() 
+        collider_objects: List[Tuple[str, GameObject]] = [(obj_id, obj) for obj_id, obj in self.game_objects.items() 
                            if obj.has_collider() and obj.active]
         
         # Check each pair of objects
@@ -154,7 +171,7 @@ class Game:
                     # Objects are colliding - handle the collision
                     self.handle_collision(obj1_id, obj1, obj2_id, obj2)
     
-    def handle_collision(self, obj1_id, obj1, obj2_id, obj2):
+    def handle_collision(self, obj1_id: str, obj1: GameObject, obj2_id: str, obj2: GameObject) -> None:
         """
         Handle a collision between two game objects.
         
@@ -168,28 +185,53 @@ class Game:
         # This could be expanded to handle specific collision interactions
         logging.debug(f"Collision detected between {obj1_id} and {obj2_id}")
     
-    def get_state(self):
+    def get_state(self) -> Dict[str, Any]:
         """
         Get the current game state for sending to clients.
         
         Returns:
             dict: Current game state
         """
-        # Include the spaceship state
-        state = self.spaceship.to_dict()
+        # Initialiser un dictionnaire d'état vide
+        state: Dict[str, Any] = {}
         
-        # Add all game objects (except spaceship which is handled separately)
-        game_objects = []
+        # Pour la compatibilité avec le code existant, inclure les données du vaisseau dans le format attendu
+        if "spaceship" in self.game_objects:
+            spaceship: SpaceShip = self.game_objects["spaceship"]
+            state.update({
+                'shipX': spaceship.position.x,
+                'shipY': spaceship.position.y,
+                'speed': getattr(spaceship, 'speed', 0)
+            })
+            
+            # Inclure l'image du vaisseau
+            if spaceship.has_image():
+                state['image'] = {
+                    'url': spaceship.image_url,
+                    'width': spaceship.image_width,
+                    'height': spaceship.image_height,
+                    'angle': spaceship.image_angle,
+                    'opacity': spaceship.image_opacity,
+                    'useRelativeSize': True
+                }
+        
+        # Ajouter tous les objets de jeu (à l'exception du vaisseau qui est déjà inclus séparément)
+        game_objects: List[Dict[str, Any]] = []
         for obj_id, obj in self.game_objects.items():
-            if obj != self.spaceship:  # Skip spaceship as it's already included
-                obj_data = obj.to_dict()
+            if obj_id != "spaceship":  # Éviter la duplication du vaisseau
+                obj_data: Dict[str, Any] = obj.to_dict()
                 obj_data['id'] = obj_id
+                
+                # Assurer que les données d'image incluent useRelativeSize pour l'affichage cohérent
+                if 'image' in obj_data:
+                    obj_data['image']['useRelativeSize'] = True
+                    
                 game_objects.append(obj_data)
         
         state['gameObjects'] = game_objects
         return state
     
-    def add_player(self, player_id, name):
+    def add_player(self, player_id: str, name: str) -> Dict[str, Any]:
         """
         Add a new player to the game.
         
@@ -213,7 +255,7 @@ class Game:
         logging.info(f"Player {name} (ID: {player_id}) joined the game")
         return self.players[player_id]
     
-    def remove_player(self, player_id):
+    def remove_player(self, player_id: str) -> Optional[Dict[str, Any]]:
         """
         Remove a player from the game.
         
@@ -224,7 +266,7 @@ class Game:
             dict or None: Removed player's data or None if player wasn't found
         """
         if player_id in self.players:
-            player_data = self.players[player_id]
+            player_data: Dict[str, Any] = self.players[player_id]
             del self.players[player_id]
             
             # Clean up player's key states
@@ -235,7 +277,7 @@ class Game:
             return player_data
         return None
     
-    def update_player_name(self, player_id, name):
+    def update_player_name(self, player_id: str, name: str) -> Optional[Dict[str, Any]]:
         """
         Update a player's name.
         
@@ -251,7 +293,7 @@ class Game:
             return self.players[player_id]
         return None
     
-    def get_players(self):
+    def get_players(self) -> List[Dict[str, Any]]:
         """
         Get list of all players.
         
@@ -260,7 +302,7 @@ class Game:
         """
         return list(self.players.values())
     
-    def handle_key_press(self, player_id, key_name, timestamp=None):
+    def handle_key_press(self, player_id: str, key_name: str, timestamp: Optional[float] = None) -> None:
         """
         Handle a key press event from a player.
         
@@ -273,7 +315,7 @@ class Game:
             self.player_keys[player_id][key_name].press(timestamp)
             logging.debug(f"Player {player_id} pressed {key_name}")
     
-    def handle_key_release(self, player_id, key_name):
+    def handle_key_release(self, player_id: str, key_name: str) -> None:
         """
         Handle a key release event from a player.
         
@@ -285,7 +327,7 @@ class Game:
             self.player_keys[player_id][key_name].release()
             logging.debug(f"Player {player_id} released {key_name}")
     
-    def get_last_active_player(self):
+    def get_last_active_player(self) -> Optional[str]:
         """
         Get the name of the last player who moved the ship.
         
