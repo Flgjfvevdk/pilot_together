@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilot Together</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Pilot Together</h1>
+        
+        <div class="join-form">
+            <h2>Join the Game</h2>
+            <div class="form-group">
+                <label for="playerName">Your Name:</label>
+                <input type="text" id="playerName" placeholder="Enter your name">
+                <button id="joinBtn">Join Game</button>
+            </div>
+        </div>
+        
+        <div class="game-area hidden">
+            <div class="game-info">
+                <h2>Players Online</h2>
+                <ul id="playersList"></ul>
+            </div>
+            
+            <div class="game-board">
+                <div id="spaceshipContainer">
+                    <div id="spaceship"></div>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-row">
+                        <button id="upBtn" class="control-btn">↑</button>
+                    </div>
+                    <div class="control-row">
+                        <button id="leftBtn" class="control-btn">←</button>
+                        <button id="rightBtn" class="control-btn">→</button>
+                    </div>
+                    <div class="control-row">
+                        <button id="downBtn" class="control-btn">↓</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-status">
+                <p id="connectionStatus">Connecting to game server...</p>
+                <p id="gameStatus">Waiting for game to start...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+</html>
