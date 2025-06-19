@@ -1,7 +1,7 @@
 import random
 from vector import Vector
 from asteroids import Asteroid
-from game_objects import GameObject
+from game_object import GameObject
 from typing import Dict, Optional, Any
 
 class Adversity(GameObject):

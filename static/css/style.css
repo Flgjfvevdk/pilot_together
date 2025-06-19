@@ -202,6 +202,36 @@ button:hover {
     transform-origin: center;
 }
 
+/* Health bar styles */
+.health-bar-container {
+    position: absolute;
+    width: 150%;
+    height: 8px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.8);
+    border-radius: 4px;
+    top: -15px;
+    left: -25%;
+    transform: translateY(-50%);
+    z-index: 10;
+    pointer-events: none;
+}
+
+.health-bar {
+    height: 100%;
+    background-color: #2ecc71; /* Green for good health */
+    border-radius: 3px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.health-bar.warning {
+    background-color: #f39c12; /* Yellow for medium health */
+}
+
+.health-bar.danger {
+    background-color: #e74c3c; /* Red for low health */
+}
+
 /* Debug styling for colliders */
 .collider-debug {
     position: absolute;
@@ -210,5 +240,47 @@ button:hover {
     top: 50%;
     left: 50%;
     transform-origin: center;
+    pointer-events: none;
+}
+
+/* Ship health bar in interface */
+.ship-health-container {
+    width: 100%;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(58, 112, 209, 0.6);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.ship-health-bar {
+    height: 100%;
+    background-color: #2ecc71; /* Green for good health */
+    width: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.ship-health-bar.warning {
+    background-color: #f39c12; /* Yellow for medium health */
+}
+
+.ship-health-bar.danger {
+    background-color: #e74c3c; /* Red for low health */
+}
+
+.ship-health-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
     pointer-events: none;
 }

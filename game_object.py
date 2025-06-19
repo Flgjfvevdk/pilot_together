@@ -190,3 +190,14 @@ class GameObject:
         Mark this object as inactive.
         """
         self.active = False
+
+    def on_collision(self, other: 'GameObject', other_id: str = None) -> None:
+        """
+        Handle collision with another game object.
+        Base implementation does nothing, subclasses should override this.
+        
+        Args:
+            other (GameObject): The other game object involved in the collision
+            other_id (str, optional): ID of the other game object
+        """
+        pass

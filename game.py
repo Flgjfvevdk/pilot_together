@@ -3,7 +3,7 @@ import logging
 import threading
 from spaceship import SpaceShip
 from key_touch import KeyTouch
-from game_objects import GameObject
+from game_object import GameObject
 from typing import Dict, List, Optional, Any, Tuple, Union
 
 class Game:
@@ -23,7 +23,7 @@ class Game:
         self.update_interval: float = 0.05  # 20 updates per second
         
         # Game objects
-        self.spaceship: SpaceShip = SpaceShip()
+        self.spaceship: SpaceShip = SpaceShip(socketio=socketio)  # Passer socketio au vaisseau
         self.game_objects: Dict[str, GameObject] = {}  # Dictionary of game objects by ID
         self.next_object_id: int = 1  # For generating unique object IDs
         
@@ -173,7 +173,7 @@ class Game:
     
     def handle_collision(self, obj1_id: str, obj1: GameObject, obj2_id: str, obj2: GameObject) -> None:
         """
-        Handle a collision between two game objects.
+        Handle a collision between two game objects by delegating to the objects themselves.
         
         Args:
             obj1_id (str): ID of the first object
@@ -181,8 +181,11 @@ class Game:
             obj2_id (str): ID of the second object
             obj2 (GameObject): Second game object
         """
-        # For now, just log the collision
-        # This could be expanded to handle specific collision interactions
+        # Let each object handle its reaction to the collision
+        obj1.on_collision(obj2, obj2_id)
+        obj2.on_collision(obj1, obj1_id)
+        
+        # Log the collision
         logging.debug(f"Collision detected between {obj1_id} and {obj2_id}")
     
     def get_state(self) -> Dict[str, Any]:

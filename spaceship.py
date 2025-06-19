@@ -1,24 +1,28 @@
-from game_objects import GameObject
+from game_object_with_health import GameObjectWithHealth
 from key_touch import KeyTouch
 from vector import Vector
 from typing import Dict, Optional, Any
 
-class SpaceShip(GameObject):
+class SpaceShip(GameObjectWithHealth):
     """
     A spaceship that can be controlled by players.
     """
-    def __init__(self, x: float = 50, y: float = 50, speed: float = 25):
+    def __init__(self, x: float = 50, y: float = 50, speed: float = 25, max_health: float = 100, socketio=None):
         """
         Initialize a new spaceship.
         
         Args:
             x (float): Initial x position as percentage (0-100)
             y (float): Initial y position as percentage (0-100)
+            speed (float): Speed of the spaceship in units per second
+            max_health (float): Maximum health of the spaceship
+            socketio: Socket.IO instance for real-time updates
         """
-        super().__init__(x, y, width=8, height=8)
+        super().__init__(x, y, width=8, height=8, max_health=max_health)
         self.speed: float = speed  # Units per second
         self.max_x: float = 100  # Maximum x coordinate (percentage)
         self.max_y: float = 100  # Maximum y coordinate (percentage)
+        self.socketio = socketio  # Socket.IO pour les mises à jour en temps réel
         
         # Set up collider (slightly smaller than the ship for better gameplay)
         self.add_collider(
@@ -81,6 +85,30 @@ class SpaceShip(GameObject):
         if move_vector.magnitude() > 0:
             ship_moved = ship_moved or self.move(move_vector, self.speed * delta_time)
         return ship_moved
+
+    def getHit(self, damage: float) -> float:
+        """
+        Apply damage to the spaceship and emit a health update event.
+        
+        Args:
+            damage (float): Amount of damage to apply
+            
+        Returns:
+            float: Remaining health
+        """
+        remaining_health = super().getHit(damage)
+        
+        # Émettre un événement de mise à jour de santé si socketio est disponible
+        if self.socketio:
+            health_data = {
+                'health': {
+                    'current': self.getCurrentHealth(),
+                    'max': self.getMaxHealth()
+                }
+            }
+            self.socketio.emit('spaceship_health_update', health_data)
+        
+        return remaining_health
 
     def to_dict(self) -> Dict[str, Any]:
         """

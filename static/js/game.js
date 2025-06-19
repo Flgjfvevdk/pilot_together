@@ -97,6 +97,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameStatus.textContent = 'Game in progress...';
             }, 2000);
         });
+        
+        // Événement de mise à jour de santé du vaisseau
+        socket.on('spaceship_health_update', (data) => {
+            if (data.health) {
+                updateShipHealthBar(data.health);
+            }
+        });
     }
     
     // Update the displayed list of players
@@ -158,9 +165,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     useRelativeSize: true,
                     angle: 0,
                     opacity: 1
-                }
+                },
+                // Inclure les données de santé si présentes dans gameState
+                health: gameState.health || null
             };
             allGameObjects.push(shipObject);
+            
+            // Mettre à jour la barre de santé globale du vaisseau
+            if (shipObject.health) {
+                updateShipHealthBar(shipObject.health);
+            }
         }
         
         // Ajouter les autres objets de jeu
@@ -170,6 +184,59 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Rendre tous les objets avec une approche unifiée
         renderGameObjects(allGameObjects);
+    }
+    
+    // Créer et initialiser la barre de santé du vaisseau dans l'interface
+    function initializeShipHealthBar() {
+        // Ne créer que si elle n'existe pas déjà
+        if (document.querySelector('.ship-health-container')) {
+            return;
+        }
+        
+        // Créer la structure de la barre de santé
+        const healthContainer = document.createElement('div');
+        healthContainer.className = 'ship-health-container';
+        
+        const healthBar = document.createElement('div');
+        healthBar.className = 'ship-health-bar';
+        
+        const healthText = document.createElement('div');
+        healthText.className = 'ship-health-text';
+        healthText.textContent = 'Vaisseau: 100%';
+        
+        healthContainer.appendChild(healthBar);
+        healthContainer.appendChild(healthText);
+        
+        // Insérer avant la zone de jeu
+        const gameBoard = document.querySelector('.game-board');
+        if (gameBoard) {
+            gameBoard.insertBefore(healthContainer, gameBoard.firstChild);
+        }
+    }
+    
+    // Mise à jour de la barre de santé du vaisseau
+    function updateShipHealthBar(health) {
+        // S'assurer que la barre existe
+        if (!document.querySelector('.ship-health-container')) {
+            initializeShipHealthBar();
+        }
+        
+        const healthBar = document.querySelector('.ship-health-bar');
+        const healthText = document.querySelector('.ship-health-text');
+        
+        if (healthBar && healthText) {
+            const healthPercent = (health.current / health.max) * 100;
+            healthBar.style.width = `${healthPercent}%`;
+            healthText.textContent = `Vaisseau: ${Math.round(healthPercent)}%`;
+            
+            // Mise à jour des classes en fonction du niveau de santé
+            healthBar.classList.remove('warning', 'danger');
+            if (healthPercent <= 25) {
+                healthBar.classList.add('danger');
+            } else if (healthPercent <= 50) {
+                healthBar.classList.add('warning');
+            }
+        }
     }
     
     // Render all game objects
@@ -208,6 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 renderedIds.add(elementId);
+                
+                // Ne pas ajouter de barre de santé au-dessus du vaisseau
+                // C'est maintenant géré par updateShipHealthBar
             } else {
                 // Traitement normal pour les autres objets
                 elementId = `game-object-${obj.id}`;
@@ -220,6 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     element.id = elementId;
                     element.classList.add('game-object');
                     spaceshipContainer.appendChild(element);
+                }
+                
+                // Ne pas ajouter de barres de santé aux autres objets de jeu
+                // Supprimer les barres de santé existantes
+                const existingHealthBar = element.querySelector('.health-bar-container');
+                if (existingHealthBar) {
+                    existingHealthBar.remove();
                 }
             }
             
@@ -259,6 +336,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 el.remove();
             }
         });
+    }
+    
+    // Fonction pour créer ou mettre à jour une barre de santé
+    function updateOrCreateHealthBar(element, health) {
+        if (!health) return;
+        
+        let healthBarContainer = element.querySelector('.health-bar-container');
+        
+        // Créer le conteneur de la barre de santé s'il n'existe pas
+        if (!healthBarContainer) {
+            healthBarContainer = document.createElement('div');
+            healthBarContainer.className = 'health-bar-container';
+            
+            const healthBar = document.createElement('div');
+            healthBar.className = 'health-bar';
+            
+            healthBarContainer.appendChild(healthBar);
+            element.appendChild(healthBarContainer);
+        }
+        
+        // Mettre à jour la barre de santé
+        const healthBar = healthBarContainer.querySelector('.health-bar');
+        const healthPercent = (health.current / health.max) * 100;
+        healthBar.style.width = `${healthPercent}%`;
+        
+        // Mise à jour des classes en fonction du niveau de santé
+        healthBar.classList.remove('warning', 'danger');
+        if (healthPercent <= 25) {
+            healthBar.classList.add('danger');
+        } else if (healthPercent <= 50) {
+            healthBar.classList.add('warning');
+        }
     }
     
     // Debug function to visualize colliders
@@ -422,6 +531,9 @@ document.addEventListener('DOMContentLoaded', () => {
             gameArea.classList.remove('hidden');
             gameStatus.textContent = 'Game in progress...';
             
+            // Initialiser la barre de santé du vaisseau
+            initializeShipHealthBar();
+            
             // Request initial game state
             socket.emit('request_game_state');
         } else {
@@ -433,6 +545,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     joinForm.classList.add('hidden');
                     gameArea.classList.remove('hidden');
                     gameStatus.textContent = 'Game in progress...';
+                    
+                    // Initialiser la barre de santé du vaisseau
+                    initializeShipHealthBar();
                     
                     // Request initial game state
                     socket.emit('request_game_state');
