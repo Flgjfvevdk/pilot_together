@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const leftBtn = document.getElementById('leftBtn');
     const rightBtn = document.getElementById('rightBtn');
     
+    // Shoot buttons
+    const shootUpBtn = document.getElementById('shootUpBtn');
+    const shootDownBtn = document.getElementById('shootDownBtn');
+    const shootLeftBtn = document.getElementById('shootLeftBtn');
+    const shootRightBtn = document.getElementById('shootRightBtn');
+    
     // Game variables
     let socket = null;
     let playerName = '';
@@ -37,7 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
         up: false,
         down: false,
         left: false,
-        right: false
+        right: false,
+        shoot_up: false,
+        shoot_down: false,
+        shoot_left: false,
+        shoot_right: false
     };
     
     // Initialize the game connection
@@ -259,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderedIds = new Set();
         
         // Créer ou mettre à jour les objets de jeu
-        objects.forEach(obj => {
+        sortedObjects.forEach(obj => {
             // Ignorer les objets sans données correctes
             if (!obj || !obj.hasOwnProperty('id')) return;
             
@@ -269,15 +279,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Cas spécial pour le vaisseau - utiliser la référence existante
             if (obj.id === 'spaceship') {
                 elementId = 'spaceship';
-                element = spaceship; // Utiliser la référence déjà capturée
+                element = spaceship; 
                 if (!element) {
                     console.error("Element with ID 'spaceship' not found in DOM");
                     return;
                 }
                 renderedIds.add(elementId);
                 
-                // Ne pas ajouter de barre de santé au-dessus du vaisseau
-                // C'est maintenant géré par updateShipHealthBar
             } else {
                 // Traitement normal pour les autres objets
                 elementId = `game-object-${obj.id}`;
@@ -292,17 +300,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     spaceshipContainer.appendChild(element);
                 }
                 
-                // Ne pas ajouter de barres de santé aux autres objets de jeu
-                // Supprimer les barres de santé existantes
-                const existingHealthBar = element.querySelector('.health-bar-container');
-                if (existingHealthBar) {
-                    existingHealthBar.remove();
-                }
             }
             
-            // Définir la position
             element.style.left = `${obj.x}%`;
             element.style.top = `${obj.y}%`;
+
+            if (obj.z_index !== undefined) {
+                element.style.zIndex = obj.z_index;
+                //print in the console : 
+                console.log(`Setting z-index for ${obj.id} to ${obj.z_index}`);
+            } else {
+                element.style.zIndex = 0; 
+                //print in the console :
+                console.log(`No z-index set for ${obj.id}, defaulting to 0`);
+                
+            }
             
             // Appliquer les propriétés d'image si présentes
             if (obj.image) {
@@ -332,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Supprimer les éléments qui ne sont plus présents dans les données
         // Mais ne jamais supprimer l'élément spaceship original
         currentElements.forEach(el => {
-            if (!renderedIds.has(el.id) && el.id !== 'spaceship') {
+            if (!renderedIds.has(el.id)) {
                 el.remove();
             }
         });
@@ -408,7 +420,16 @@ document.addEventListener('DOMContentLoaded', () => {
             sendKeyState(key, true);
             
             // Visual feedback for button
-            const btnMap = { up: upBtn, down: downBtn, left: leftBtn, right: rightBtn };
+            const btnMap = { 
+                up: upBtn, 
+                down: downBtn, 
+                left: leftBtn, 
+                right: rightBtn,
+                shoot_up: shootUpBtn,
+                shoot_down: shootDownBtn,
+                shoot_left: shootLeftBtn,
+                shoot_right: shootRightBtn
+            };
             if (btnMap[key]) {
                 btnMap[key].classList.add('active');
             }
@@ -421,7 +442,16 @@ document.addEventListener('DOMContentLoaded', () => {
             sendKeyState(key, false);
             
             // Visual feedback for button
-            const btnMap = { up: upBtn, down: downBtn, left: leftBtn, right: rightBtn };
+            const btnMap = { 
+                up: upBtn, 
+                down: downBtn, 
+                left: leftBtn, 
+                right: rightBtn,
+                shoot_up: shootUpBtn,
+                shoot_down: shootDownBtn,
+                shoot_left: shootLeftBtn,
+                shoot_right: shootRightBtn
+            };
             if (btnMap[key]) {
                 btnMap[key].classList.remove('active');
             }
@@ -458,6 +488,36 @@ document.addEventListener('DOMContentLoaded', () => {
     rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('right'); });
     rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('right'); });
     
+    // Setup shoot buttons
+    shootUpBtn.addEventListener('mousedown', () => handleKeyDown('shoot_up'));
+    shootUpBtn.addEventListener('mouseup', () => handleKeyUp('shoot_up'));
+    shootUpBtn.addEventListener('mouseleave', () => handleKeyUp('shoot_up'));
+    
+    shootDownBtn.addEventListener('mousedown', () => handleKeyDown('shoot_down'));
+    shootDownBtn.addEventListener('mouseup', () => handleKeyUp('shoot_down'));
+    shootDownBtn.addEventListener('mouseleave', () => handleKeyUp('shoot_down'));
+    
+    shootLeftBtn.addEventListener('mousedown', () => handleKeyDown('shoot_left'));
+    shootLeftBtn.addEventListener('mouseup', () => handleKeyUp('shoot_left'));
+    shootLeftBtn.addEventListener('mouseleave', () => handleKeyUp('shoot_left'));
+    
+    shootRightBtn.addEventListener('mousedown', () => handleKeyDown('shoot_right'));
+    shootRightBtn.addEventListener('mouseup', () => handleKeyUp('shoot_right'));
+    shootRightBtn.addEventListener('mouseleave', () => handleKeyUp('shoot_right'));
+    
+    // For touch devices - shoot buttons
+    shootUpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_up'); });
+    shootUpBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_up'); });
+    
+    shootDownBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_down'); });
+    shootDownBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_down'); });
+    
+    shootLeftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_left'); });
+    shootLeftBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_left'); });
+    
+    shootRightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_right'); });
+    shootRightBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_right'); });
+    
     // Add keyboard controls
     document.addEventListener('keydown', (e) => {
         if (!isConnected || gameArea.classList.contains('hidden')) return;
@@ -478,6 +538,22 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'ArrowRight':
                 e.preventDefault(); // Prevent page scrolling
                 handleKeyDown('right');
+                break;
+            case 'w':
+                e.preventDefault();
+                handleKeyDown('shoot_up');
+                break;
+            case 's':
+                e.preventDefault();
+                handleKeyDown('shoot_down');
+                break;
+            case 'a':
+                e.preventDefault();
+                handleKeyDown('shoot_left');
+                break;
+            case 'd':
+                e.preventDefault();
+                handleKeyDown('shoot_right');
                 break;
         }
     });
@@ -501,6 +577,22 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'ArrowRight':
                 e.preventDefault(); // Prevent page scrolling
                 handleKeyUp('right');
+                break;
+            case 'w':
+                e.preventDefault();
+                handleKeyUp('shoot_up');
+                break;
+            case 's':
+                e.preventDefault();
+                handleKeyUp('shoot_down');
+                break;
+            case 'a':
+                e.preventDefault();
+                handleKeyUp('shoot_left');
+                break;
+            case 'd':
+                e.preventDefault();
+                handleKeyUp('shoot_right');
                 break;
         }
     });

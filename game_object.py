@@ -2,30 +2,37 @@ from key_touch import KeyTouch
 from vector import Vector
 from collider import Collider
 from typing import List, Dict, Optional, Union, Any
+from tag import Tag
 
 class GameObject:
     """
     Base class for all game objects.
     All game objects have a position and can be updated.
     """
-    def __init__(self, x: float = 0, y: float = 0, width: float = 0, height: float = 0):
+    def __init__(self, game:'Game', x: float = 0, y: float = 0, width: float = 0, height: float = 0, tag: Tag = Tag.EMPTY, z_index: int = 0):
         """
         Initialize a new game object.
         
         Args:
+            game (Game): Reference to the game instance
             x (float): Initial x position
             y (float): Initial y position
             width (float): Width of the object
             height (float): Height of the object
+            tag (Tag): Tag for categorizing the object
+            z_index (int): Rendering order (higher values are rendered on top)
         """
+        self.game: 'Game' = game  
         self.position: Vector = Vector(x, y)
         self.width: float = width
         self.height: float = height
         self.active: bool = True
-        self.colliders: List[Collider] = []  # List of colliders
+        self.colliders: List[Collider] = []
+        self.tag: Tag = tag
+        self.z_index: int = z_index
         
         # Image properties
-        self.image_url: Optional[str] = None  # Path to image file
+        self.image_url: Optional[str] = None
         self.image_width: float = 0
         self.image_height: float = 0
         self.image_angle: float = 0  # Rotation in radians
@@ -166,7 +173,8 @@ class GameObject:
             'y': self.position.y,
             'width': self.width,
             'height': self.height,
-            'active': self.active
+            'active': self.active,
+            'z_index': self.z_index
         }
         
         # Add colliders data if present

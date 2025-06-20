@@ -23,7 +23,7 @@ class Game:
         self.update_interval: float = 0.05  # 20 updates per second
         
         # Game objects
-        self.spaceship: SpaceShip = SpaceShip(socketio=socketio)  # Passer socketio au vaisseau
+        self.spaceship: SpaceShip = SpaceShip(socketio=socketio, game=self)  # Passer socketio au vaisseau
         self.game_objects: Dict[str, GameObject] = {}  # Dictionary of game objects by ID
         self.next_object_id: int = 1  # For generating unique object IDs
         
@@ -128,21 +128,15 @@ class Game:
         Args:
             delta_time (float): Time elapsed since last update
         """
-        # Process player inputs and update spaceship
-        ship_moved: bool = self.spaceship.update(self.players, self.player_keys, delta_time)
+        # self.spaceship.update(self.players, self.player_keys, delta_time=delta_time)
 
-        # Update all other game objects
         for obj_id, obj in list(self.game_objects.items()):  # Use list to avoid modification during iteration
-            if obj != self.spaceship:  # Skip spaceship as it's already updated
-                obj.update(self.players, self.player_keys, delta_time)
+            obj.update(self.players, self.player_keys, delta_time=delta_time)
         
-        # Remove inactive game objects
         self.cleanup_inactive_objects()
 
-        # Check collisions between game objects
         self.check_collisions()
         
-        # Emit game state to clients at each update cycle, not just when ship moves
         if self.socketio:
             game_state: Dict[str, Any] = self.get_state()
             self.socketio.emit('game_state_update', game_state)
@@ -157,18 +151,15 @@ class Game:
     
     def check_collisions(self) -> None:
         """Check for collisions between game objects."""
-        # Get list of objects with colliders
         collider_objects: List[Tuple[str, GameObject]] = [(obj_id, obj) for obj_id, obj in self.game_objects.items() 
                            if obj.has_collider() and obj.active]
         
-        # Check each pair of objects
         for i in range(len(collider_objects)):
             for j in range(i + 1, len(collider_objects)):
                 obj1_id, obj1 = collider_objects[i]
                 obj2_id, obj2 = collider_objects[j]
                 
                 if obj1.collides_with(obj2):
-                    # Objects are colliding - handle the collision
                     self.handle_collision(obj1_id, obj1, obj2_id, obj2)
     
     def handle_collision(self, obj1_id: str, obj1: GameObject, obj2_id: str, obj2: GameObject) -> None:
@@ -181,11 +172,9 @@ class Game:
             obj2_id (str): ID of the second object
             obj2 (GameObject): Second game object
         """
-        # Let each object handle its reaction to the collision
         obj1.on_collision(obj2, obj2_id)
         obj2.on_collision(obj1, obj1_id)
         
-        # Log the collision
         logging.debug(f"Collision detected between {obj1_id} and {obj2_id}")
     
     def get_state(self) -> Dict[str, Any]:
@@ -195,10 +184,8 @@ class Game:
         Returns:
             dict: Current game state
         """
-        # Initialiser un dictionnaire d'état vide
         state: Dict[str, Any] = {}
         
-        # Pour la compatibilité avec le code existant, inclure les données du vaisseau dans le format attendu
         if "spaceship" in self.game_objects:
             spaceship: SpaceShip = self.game_objects["spaceship"]
             state.update({
@@ -207,7 +194,6 @@ class Game:
                 'speed': getattr(spaceship, 'speed', 0)
             })
             
-            # Inclure l'image du vaisseau
             if spaceship.has_image():
                 state['image'] = {
                     'url': spaceship.image_url,
@@ -218,14 +204,13 @@ class Game:
                     'useRelativeSize': True
                 }
         
-        # Ajouter tous les objets de jeu (à l'exception du vaisseau qui est déjà inclus séparément)
+        
         game_objects: List[Dict[str, Any]] = []
         for obj_id, obj in self.game_objects.items():
-            if obj_id != "spaceship":  # Éviter la duplication du vaisseau
+            if obj_id != "spaceship":  
                 obj_data: Dict[str, Any] = obj.to_dict()
                 obj_data['id'] = obj_id
                 
-                # Assurer que les données d'image incluent useRelativeSize pour l'affichage cohérent
                 if 'image' in obj_data:
                     obj_data['image']['useRelativeSize'] = True
                     
@@ -247,12 +232,15 @@ class Game:
             'name': name
         }
         
-        # Initialize player's key states
         self.player_keys[player_id] = {
             'up': KeyTouch('up'),
             'down': KeyTouch('down'),
             'left': KeyTouch('left'),
-            'right': KeyTouch('right')
+            'right': KeyTouch('right'),
+            'shoot_up': KeyTouch('shoot_up'),
+            'shoot_down': KeyTouch('shoot_down'),
+            'shoot_left': KeyTouch('shoot_left'),
+            'shoot_right': KeyTouch('shoot_right')
         }
         
         logging.info(f"Player {name} (ID: {player_id}) joined the game")

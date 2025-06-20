@@ -3,13 +3,16 @@ from vector import Vector
 from asteroids import Asteroid
 from game_object import GameObject
 from typing import Dict, Optional, Any
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from game import Game
 
 class Adversity(GameObject):
     """
     Adversity system that spawns asteroids at regular intervals.
     Implemented as a GameObject so it can be updated naturally by the game loop.
     """
-    def __init__(self, game_reference):
+    def __init__(self, game_reference:'Game'):
         """
         Initialize the adversity system.
 
@@ -17,7 +20,7 @@ class Adversity(GameObject):
             game_reference: Reference to the game instance for adding new objects
         """
         super().__init__(0, 0)  # Position doesn't matter as this is an invisible manager
-        self.game = game_reference
+        self.game:Game = game_reference
         self.spawn_interval: float = 0.5  # Spawn an asteroid every 0.5 seconds by default
         self.last_spawn_time: float = 0
         self.active: bool = True
@@ -66,5 +69,5 @@ class Adversity(GameObject):
             direction: Vector = Vector(-1, random.uniform(-1, 1))  # Moving left
 
         # Create the asteroid and add it to the game
-        asteroid: Asteroid = Asteroid(x, y, direction)
+        asteroid: Asteroid = Asteroid(game = self.game, x=x, y=y, direction=direction)
         self.game.add_game_object(asteroid)

@@ -146,11 +146,23 @@ button:hover {
 .controls {
     margin-top: 15px;
     display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 500px;
+}
+
+.controls-section {
+    display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1%;
-    width: 100%;
-    max-width: 300px;
+    gap: 5px;
+    width: 45%;
+}
+
+.controls-section h3 {
+    margin: 0 0 5px 0;
+    color: #7ab5ff;
+    font-size: 16px;
 }
 
 .control-row {
@@ -193,6 +205,22 @@ button:hover {
     background-color: #3a70d1;
     color: white;
     transform: scale(0.95);
+}
+
+/* Shooting buttons styling */
+.shoot-btn {
+    background-color: #3a1a1a;
+    border: 2px solid #d13a3a;
+    color: #ff7a7a;
+}
+
+.shoot-btn:hover {
+    background-color: #4d2525;
+}
+
+.shoot-btn:active, .shoot-btn.active {
+    background-color: #d13a3a;
+    color: white;
 }
 
 /* Game object styles */

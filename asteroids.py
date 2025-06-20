@@ -1,14 +1,16 @@
 from game_object_with_health import GameObjectWithHealth
 from vector import Vector
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from game import Game
 from spaceship import SpaceShip
-
+from tag import Tag
 
 class Asteroid(GameObjectWithHealth):
     """
     Represents an asteroid that moves in a specific direction.
     """
-    def __init__(self, x: float, y: float, direction: Vector, speed: float = 40, max_health: float = 10, damage:float = 2.0):
+    def __init__(self, game:'Game', x: float, y: float, direction: Vector, speed: float = 40, tag= Tag.ENEMY, max_health: float = 10, damage:float = 2.0):
         """
         Initialize an asteroid.
 
@@ -19,11 +21,11 @@ class Asteroid(GameObjectWithHealth):
             speed (float): Speed of the asteroid.
             max_health (float): Maximum health of the asteroid.
         """
-        super().__init__(x, y, width=5, height=5, max_health=max_health)
+        super().__init__(game=game, x=x, y=y, width=5, height=5, max_health=max_health, tag=Tag.ENEMY)
         self.speed: float = speed
         self.damage: float = damage 
         self.direction: Vector = direction.normalize()  # Ensure the direction is a unit vector
-        self.set_image('/static/img/white.png', self.width, self.height)
+        self.set_image('/static/img/jaune.png', self.width, self.height)
         
         # Ajouter un collider carré par défaut
         self.add_collider(
@@ -63,7 +65,7 @@ class Asteroid(GameObjectWithHealth):
             remaining_health = other.getHit(self.damage)
             
             # The asteroid is destroyed upon impact
-            self.active = False
+            self.die()
             
             # Log the collision
             import logging
