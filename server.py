@@ -48,22 +48,7 @@ def handle_connect():
         game_manager.root.after(0, lambda: game_manager.update_player_list(game.get_players()))
         game_manager.root.after(0, lambda: game_manager.update_status(f"New player connected: {player_data['name']}"))
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    """Handle player disconnection"""
-    player_id = request.sid
-    player_data = game.remove_player(player_id)
-    if player_data:
-        logging.info(f"Player disconnected: {player_id}")
-        
-        # Notify everyone about the player leaving
-        emit('player_left', player_data, broadcast=True)
-        
-        # Update the game manager window
-        if game_manager:
-            game_manager.root.after(0, lambda: game_manager.update_player_list(game.get_players()))
-            game_manager.root.after(0, lambda: game_manager.update_status(f"Player left: {player_data['name']}"))
-
+# Modification de la liste des touches
 @socketio.on('set_name')
 def handle_set_name(data):
     """Handle player name change"""
@@ -80,6 +65,22 @@ def handle_set_name(data):
                 game_manager.root.after(0, lambda: game_manager.update_status(
                     f"Player renamed: {player_data['name']}"
                 ))
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle player disconnection"""
+    player_id = request.sid
+    player_data = game.remove_player(player_id)
+    if player_data:
+        logging.info(f"Player disconnected: {player_id}")
+        
+        # Notify everyone about the player leaving
+        emit('player_left', player_data, broadcast=True)
+        
+        # Update the game manager window
+        if game_manager:
+            game_manager.root.after(0, lambda: game_manager.update_player_list(game.get_players()))
+            game_manager.root.after(0, lambda: game_manager.update_status(f"Player left: {player_data['name']}"))
 
 @socketio.on('request_game_state')
 def handle_request_game_state():

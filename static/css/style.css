@@ -182,6 +182,20 @@ button:hover {
     width: 100%;        /* Assure 100% de largeur */
 }
 
+.controls-section.utility-controls {
+    flex-basis: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.utility-controls .control-row {
+    display: flex;
+    gap: 20px; /* Plus d'espace entre les boutons */
+    justify-content: center;
+}
+
 .controls-section h3 {
     margin: 0 0 5px 0;
     color: #7ab5ff;

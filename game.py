@@ -223,10 +223,7 @@ class Game:
             'shoot_left':  KeyTouch('shoot_left'),
             'shoot_right': KeyTouch('shoot_right'),
             'cool':        KeyTouch('cool'),
-            'shield_up':   KeyTouch('shield_up'),
-            'shield_down': KeyTouch('shield_down'),
-            'shield_left': KeyTouch('shield_left'),
-            'shield_right':KeyTouch('shield_right')
+            'shield':      KeyTouch('shield')
         }
         
         logging.info(f"Player {name} (ID: {player_id}) joined the game")

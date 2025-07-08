@@ -28,11 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const shootRightBtn = document.getElementById('shootRightBtn');
     const coolBtn = document.getElementById('coolBtn');
     
-    // Shield buttons
-    const shieldUpBtn = document.getElementById('shieldUpBtn');
-    const shieldDownBtn = document.getElementById('shieldDownBtn');
-    const shieldLeftBtn = document.getElementById('shieldLeftBtn');
-    const shieldRightBtn = document.getElementById('shieldRightBtn');
+    // Shield button
+    const shieldBtn = document.getElementById('shieldBtn');
     
     // Repair buttons & état
     const repairBtns = Array.from({length:10}, (_,i) => document.getElementById(`repairBtn${i}`));
@@ -98,10 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shoot_left: false,
         shoot_right: false,
         cool: false,
-        shield_up: false,
-        shield_down: false,
-        shield_left: false,
-        shield_right: false
+        shield: false // Remplacé les 4 directions par un seul shield
     };
     
     // Initialize the game connection
@@ -478,10 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 shoot_left: shootLeftBtn,
                 shoot_right: shootRightBtn,
                 cool: coolBtn,
-                shield_up: shieldUpBtn,
-                shield_down: shieldDownBtn,
-                shield_left: shieldLeftBtn,
-                shield_right: shieldRightBtn
+                shield: shieldBtn // Remplacer les 4 directions par un seul shield
             };
             if (btnMap[key]) {
                 btnMap[key].classList.add('active');
@@ -505,10 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 shoot_left: shootLeftBtn,
                 shoot_right: shootRightBtn,
                 cool: coolBtn,
-                shield_up: shieldUpBtn,
-                shield_down: shieldDownBtn,
-                shield_left: shieldLeftBtn,
-                shield_right: shieldRightBtn
+                shield: shieldBtn // Remplacer les 4 directions par un seul shield
             };
             if (btnMap[key]) {
                 btnMap[key].classList.remove('active');
@@ -583,34 +571,13 @@ document.addEventListener('DOMContentLoaded', () => {
     coolBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('cool'); });
     coolBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('cool'); });
     
-    // Setup shield buttons
-    shieldUpBtn.addEventListener('mousedown', () => handleKeyDown('shield_up'));
-    shieldUpBtn.addEventListener('mouseup', () => handleKeyUp('shield_up'));
-    shieldUpBtn.addEventListener('mouseleave', () => handleKeyUp('shield_up'));
-    shieldUpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield_up'); });
-    shieldUpBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield_up'); });
-    shieldUpBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield_up'); });
-
-    shieldLeftBtn.addEventListener('mousedown', () => handleKeyDown('shield_left'));
-    shieldLeftBtn.addEventListener('mouseup', () => handleKeyUp('shield_left'));
-    shieldLeftBtn.addEventListener('mouseleave', () => handleKeyUp('shield_left'));
-    shieldLeftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield_left'); });
-    shieldLeftBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield_left'); });
-    shieldLeftBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield_left'); });
-
-    shieldRightBtn.addEventListener('mousedown', () => handleKeyDown('shield_right'));
-    shieldRightBtn.addEventListener('mouseup', () => handleKeyUp('shield_right'));
-    shieldRightBtn.addEventListener('mouseleave', () => handleKeyUp('shield_right'));
-    shieldRightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield_right'); });
-    shieldRightBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield_right'); });
-    shieldRightBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield_right'); });
-
-    shieldDownBtn.addEventListener('mousedown', () => handleKeyDown('shield_down'));
-    shieldDownBtn.addEventListener('mouseup', () => handleKeyUp('shield_down'));
-    shieldDownBtn.addEventListener('mouseleave', () => handleKeyUp('shield_down'));
-    shieldDownBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield_down'); });
-    shieldDownBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield_down'); });
-    shieldDownBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield_down'); });
+    // Setup shield button (remplace les 4 boutons directionnels)
+    shieldBtn.addEventListener('mousedown', () => handleKeyDown('shield'));
+    shieldBtn.addEventListener('mouseup', () => handleKeyUp('shield'));
+    shieldBtn.addEventListener('mouseleave', () => handleKeyUp('shield'));
+    shieldBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield'); });
+    shieldBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield'); });
+    shieldBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield'); });
 
     // Add keyboard controls
     document.addEventListener('keydown', (e) => {
@@ -637,9 +604,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 handleKeyDown('shoot_up');
                 break;
-            case 's':
+            case 's': // Une seule touche pour le shield
                 e.preventDefault();
-                handleKeyDown('shoot_down');
+                handleKeyDown('shield');
                 break;
             case 'a':
                 e.preventDefault();
@@ -652,22 +619,6 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'c':
                 e.preventDefault();
                 handleKeyDown('cool');
-                break;
-            case 'i':
-                e.preventDefault();
-                handleKeyDown('shield_up');
-                break;
-            case 'k':
-                e.preventDefault();
-                handleKeyDown('shield_down');
-                break;
-            case 'j':
-                e.preventDefault();
-                handleKeyDown('shield_left');
-                break;
-            case 'l':
-                e.preventDefault();
-                handleKeyDown('shield_right');
                 break;
         }
     });
@@ -696,9 +647,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 handleKeyUp('shoot_up');
                 break;
-            case 's':
+            case 's': // Une seule touche pour le shield
                 e.preventDefault();
-                handleKeyUp('shoot_down');
+                handleKeyUp('shield');
                 break;
             case 'a':
                 e.preventDefault();
@@ -711,22 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'c':
                 e.preventDefault();
                 handleKeyUp('cool');
-                break;
-            case 'i':
-                e.preventDefault();
-                handleKeyUp('shield_up');
-                break;
-            case 'k':
-                e.preventDefault();
-                handleKeyUp('shield_down');
-                break;
-            case 'j':
-                e.preventDefault();
-                handleKeyUp('shield_left');
-                break;
-            case 'l':
-                e.preventDefault();
-                handleKeyUp('shield_right');
                 break;
         }
     });

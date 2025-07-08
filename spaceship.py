@@ -55,9 +55,9 @@ class SpaceShip(GameObjectWithHealth):
         
         # Overheat management
         self.overheat = Overheat()
-        self.init_shield_cannons_direction(reload_time=2.0)
+        self.init_shield_cannon()  # Nouvelle méthode simplifiée
         self.heat_shoot = 3.0
-        self.heat_shield = 10.0
+        self.heat_shield = 20.0  # Augmenté car il n'y a qu'un seul shield plus puissant
 
         # Rotating cannon setup using SpaceCannon
         self.rotating_cannon = SpaceCannon(
@@ -107,22 +107,19 @@ class SpaceShip(GameObjectWithHealth):
         }
         self.linked_game_objects = list(self.space_cannons_directions.values()).copy()
 
-    def init_shield_cannons_direction(self, reload_time: float) -> None:
-        dirs = {
-            'up':    Vector(0, -1),
-            'down':  Vector(0, 1),
-            'left':  Vector(-1, 0),
-            'right': Vector(1, 0)
-        }
-        self.shield_cannons: Dict[str, ShieldCannon] = {}
-        for key, vec in dirs.items():
-            cannon = ShieldCannon(
-                x=self.position.x, y=self.position.y,
-                direction=vec,
-                game=self.game,
-                reload_time=reload_time
-            )
-            self.shield_cannons[key] = cannon
+    def init_shield_cannon(self) -> None:
+        """Initialise un seul canon de bouclier stationnaire."""
+        self.shield_cannon = ShieldCannon(
+            x=self.position.x,
+            y=self.position.y,
+            direction=Vector(0, 0),  # Direction non utilisée car vitesse = 0
+            game=self.game,
+            speed=0.0,  # Le bouclier reste sur place
+            reload_time=5.0,  # Temps de recharge plus long
+            barrier_lifespan=4.0,  # Durée de vie plus longue
+            width=24.0,  # Bouclier plus large
+            height=24.0  # Bouclier plus haut
+        )
 
     def move(self, move_vector_direction: Vector, speed: Optional[float] = None) -> bool:
         """
@@ -217,21 +214,24 @@ class SpaceShip(GameObjectWithHealth):
 
     def manage_shield(self, player_keys: Dict[int, Dict[str, KeyTouch]]) -> None:
         """
-        Handle input for the shield cannon based on player keys.
+        Gère l'activation du bouclier basé sur les touches des joueurs.
         
         Args:
-            player_keys (dict[int, dict[str, KeyTouch]]): Dictionary of player keys
+            player_keys (dict[int, dict[str, KeyTouch]]): Dictionnaire des touches des joueurs
         """
-        for direction, cannon in self.shield_cannons.items():
-            cannon.set_position(self.position.x, self.position.y)
-            active = any(
-                keys.get(f'shield_{direction}') and keys[f'shield_{direction}'].is_active()
-                for keys in player_keys.values()
-            )
-            if active:
-                has_shoot:bool = cannon.shoot()
-                if has_shoot:
-                    self.overheat.add_heat(self.heat_shield)
+        # Mise à jour de la position du canon
+        self.shield_cannon.set_position(self.position.x, self.position.y)
+        
+        # Vérification si la touche shield est pressée par un joueur
+        shield_active = any(
+            keys.get('shield') and keys['shield'].is_active()
+            for keys in player_keys.values()
+        )
+        
+        if shield_active:
+            has_shoot = self.shield_cannon.shoot()
+            if has_shoot:
+                self.overheat.add_heat(self.heat_shield)
 
     def rotate_and_shoot(self, angle: float) -> None:
         """
