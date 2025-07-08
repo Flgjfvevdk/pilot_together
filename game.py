@@ -5,6 +5,7 @@ from spaceship import SpaceShip
 from key_touch import KeyTouch
 from game_object import GameObject
 from typing import Dict, List, Optional, Any, Tuple, Union
+from vector import Vector
 
 class Game:
     """
@@ -20,7 +21,7 @@ class Game:
         self.socketio = socketio
         self.running: bool = False
         self.update_thread: Optional[threading.Thread] = None
-        self.update_interval: float = 0.05  # 20 updates per second
+        self.update_interval: float = 0.01  # 20 updates per second
         
         # Game objects
         self.spaceship: SpaceShip = SpaceShip(socketio=socketio, game=self)  # Passer socketio au vaisseau
@@ -186,35 +187,15 @@ class Game:
         """
         state: Dict[str, Any] = {}
         
-        if "spaceship" in self.game_objects:
-            spaceship: SpaceShip = self.game_objects["spaceship"]
-            state.update({
-                'shipX': spaceship.position.x,
-                'shipY': spaceship.position.y,
-                'speed': getattr(spaceship, 'speed', 0)
-            })
-            
-            if spaceship.has_image():
-                state['image'] = {
-                    'url': spaceship.image_url,
-                    'width': spaceship.image_width,
-                    'height': spaceship.image_height,
-                    'angle': spaceship.image_angle,
-                    'opacity': spaceship.image_opacity,
-                    'useRelativeSize': True
-                }
-        
-        
         game_objects: List[Dict[str, Any]] = []
         for obj_id, obj in self.game_objects.items():
-            if obj_id != "spaceship":  
-                obj_data: Dict[str, Any] = obj.to_dict()
-                obj_data['id'] = obj_id
+            obj_data: Dict[str, Any] = obj.to_dict()
+            obj_data['id'] = obj_id
+            
+            if 'image' in obj_data:
+                obj_data['image']['useRelativeSize'] = True
                 
-                if 'image' in obj_data:
-                    obj_data['image']['useRelativeSize'] = True
-                    
-                game_objects.append(obj_data)
+            game_objects.append(obj_data)
         
         state['gameObjects'] = game_objects
         return state
@@ -233,14 +214,19 @@ class Game:
         }
         
         self.player_keys[player_id] = {
-            'up': KeyTouch('up'),
-            'down': KeyTouch('down'),
-            'left': KeyTouch('left'),
-            'right': KeyTouch('right'),
-            'shoot_up': KeyTouch('shoot_up'),
-            'shoot_down': KeyTouch('shoot_down'),
-            'shoot_left': KeyTouch('shoot_left'),
-            'shoot_right': KeyTouch('shoot_right')
+            'up':          KeyTouch('up'),
+            'down':        KeyTouch('down'),
+            'left':        KeyTouch('left'),
+            'right':       KeyTouch('right'),
+            'shoot_up':    KeyTouch('shoot_up'),
+            'shoot_down':  KeyTouch('shoot_down'),
+            'shoot_left':  KeyTouch('shoot_left'),
+            'shoot_right': KeyTouch('shoot_right'),
+            'cool':        KeyTouch('cool'),
+            'shield_up':   KeyTouch('shield_up'),
+            'shield_down': KeyTouch('shield_down'),
+            'shield_left': KeyTouch('shield_left'),
+            'shield_right':KeyTouch('shield_right')
         }
         
         logging.info(f"Player {name} (ID: {player_id}) joined the game")
@@ -326,3 +312,12 @@ class Game:
             str or None: Player name or None if no player has moved the ship
         """
         return self.last_active_player
+
+    def get_spaceship_position(self) -> Vector:
+        """
+        Get the current position of the spaceship.
+        
+        Returns:
+            Vector: Position of the spaceship
+        """
+        return self.spaceship.position.copy() if self.spaceship else Vector(0, 0)

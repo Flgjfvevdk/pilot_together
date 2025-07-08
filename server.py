@@ -5,6 +5,7 @@ import logging
 import tkinter as tk
 import threading
 import time
+import math
 from game import Game
 from game_manager_window import GameManagerWindow
 
@@ -98,6 +99,22 @@ def handle_key_up(data):
     player_id = request.sid
     if 'key' in data:
         game.handle_key_release(player_id, data['key'])
+
+@socketio.on('repair')
+def handle_repair():
+    """
+    Handle repair requests from clients.
+    """
+    # Heal via la méthode spaceship.repair(), qui émet déjà health_update
+    game.spaceship.repair()
+
+@socketio.on('rotate_shoot')
+def handle_rotate_shoot(data):
+    """
+    Receive angle from client and fire rotating cannon.
+    """
+    angle = data.get('angle', 0)
+    game.spaceship.rotate_and_shoot(angle)
 
 def get_local_ip():
     """Get the local IP address to display connection info"""

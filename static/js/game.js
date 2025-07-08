@@ -26,7 +26,56 @@ document.addEventListener('DOMContentLoaded', () => {
     const shootDownBtn = document.getElementById('shootDownBtn');
     const shootLeftBtn = document.getElementById('shootLeftBtn');
     const shootRightBtn = document.getElementById('shootRightBtn');
+    const coolBtn = document.getElementById('coolBtn');
     
+    // Shield buttons
+    const shieldUpBtn = document.getElementById('shieldUpBtn');
+    const shieldDownBtn = document.getElementById('shieldDownBtn');
+    const shieldLeftBtn = document.getElementById('shieldLeftBtn');
+    const shieldRightBtn = document.getElementById('shieldRightBtn');
+    
+    // Repair buttons & état
+    const repairBtns = Array.from({length:10}, (_,i) => document.getElementById(`repairBtn${i}`));
+    let activeRepair = null;
+
+    function pickNewRepair() {
+        if (activeRepair !== null) repairBtns[activeRepair].classList.remove('active');
+        activeRepair = Math.floor(Math.random() * repairBtns.length);
+        repairBtns[activeRepair].classList.add('active');
+    }
+
+    // setup listeners
+    repairBtns.forEach((btn, idx) => {
+        btn.addEventListener('click', () => {
+            if (idx === activeRepair) {
+                socket.emit('repair');    // demande de réparation
+                pickNewRepair();
+            }
+        });
+        // touch support
+        btn.addEventListener('touchstart', e => { e.preventDefault(); });
+        btn.addEventListener('touchend', e => {
+            e.preventDefault();
+            // clear all highlights
+            repairBtns.forEach(b => b.classList.remove('active'));
+            // if correct button, trigger and pick new, else do nothing
+            if (idx === activeRepair) {
+                socket.emit('repair');
+                pickNewRepair();
+            }
+            // highlight the (new) active button
+            repairBtns[activeRepair].classList.add('active');
+        });
+        btn.addEventListener('touchcancel', e => {
+            e.preventDefault();
+            repairBtns.forEach(b => b.classList.remove('active'));
+            repairBtns[activeRepair].classList.add('active');
+        });
+    });
+
+    // démarre l’activation
+    pickNewRepair();
+
     // Game variables
     let socket = null;
     let playerName = '';
@@ -47,7 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
         shoot_up: false,
         shoot_down: false,
         shoot_left: false,
-        shoot_right: false
+        shoot_right: false,
+        cool: false,
+        shield_up: false,
+        shield_down: false,
+        shield_left: false,
+        shield_right: false
     };
     
     // Initialize the game connection
@@ -156,44 +210,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateGameState(newState) {
         gameState = newState;
         
-        // Rassembler tous les objets du jeu pour un traitement uniforme
-        let allGameObjects = [];
+        // Create a sorted copy of the game objects
+        let sortedObjects = [...gameState.gameObjects];
         
-        // Convertir les données du vaisseau en un format d'objet standard
-        if (gameState.hasOwnProperty('shipX') && gameState.hasOwnProperty('shipY')) {
-            const shipObject = {
-                id: 'spaceship',
-                x: gameState.shipX,
-                y: gameState.shipY,
-                width: gameState.width || 40,
-                height: gameState.height || 40,
-                active: true,
-                image: gameState.image || {
-                    url: '/static/img/spaceship.png',
-                    width: 8, // Pourcentage par défaut
-                    height: 8, // Pourcentage par défaut
-                    useRelativeSize: true,
-                    angle: 0,
-                    opacity: 1
-                },
-                // Inclure les données de santé si présentes dans gameState
-                health: gameState.health || null
-            };
-            allGameObjects.push(shipObject);
-            
-            // Mettre à jour la barre de santé globale du vaisseau
-            if (shipObject.health) {
-                updateShipHealthBar(shipObject.health);
+        // Sort objects by z-index for proper rendering order (lower z-index first)
+        sortedObjects.sort((a, b) => (a.z_index || 0) - (b.z_index || 0));
+        
+        // Render all game objects with a unified approach
+        renderGameObjects(sortedObjects);
+        
+        // Update spaceship health bar if the spaceship exists
+        const shipObject = sortedObjects.find(obj => obj.id === 'spaceship');
+        if (shipObject && shipObject.health) {
+            updateShipHealthBar(shipObject.health);
+            if (shipObject.temperature !== undefined) {
+                updateTemperatureBar(shipObject.temperature, shipObject.maxTemperature);
             }
         }
-        
-        // Ajouter les autres objets de jeu
-        if (gameState.gameObjects && Array.isArray(gameState.gameObjects)) {
-            allGameObjects = allGameObjects.concat(gameState.gameObjects);
-        }
-        
-        // Rendre tous les objets avec une approche unifiée
-        renderGameObjects(allGameObjects);
     }
     
     // Créer et initialiser la barre de santé du vaisseau dans l'interface
@@ -221,6 +254,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const gameBoard = document.querySelector('.game-board');
         if (gameBoard) {
             gameBoard.insertBefore(healthContainer, gameBoard.firstChild);
+            // temperature bar
+            const tempContainer = document.createElement('div');
+            tempContainer.className = 'ship-temp-container';
+            const tempBar = document.createElement('div');
+            tempBar.className = 'ship-temp-bar';
+            const tempText = document.createElement('div');
+            tempText.className = 'ship-temp-text';
+            tempText.textContent = 'Température: 0%';
+            tempContainer.appendChild(tempBar);
+            tempContainer.appendChild(tempText);
+            gameBoard.insertBefore(tempContainer, healthContainer.nextSibling);
         }
     }
     
@@ -249,6 +293,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Met à jour la barre de température du vaisseau
+    function updateTemperatureBar(temp, maxTemp) {
+        if (!document.querySelector('.ship-temp-container')) return;
+        const tempBar = document.querySelector('.ship-temp-bar');
+        const tempText = document.querySelector('.ship-temp-text');
+        const pct = (temp / maxTemp) * 100;
+        tempBar.style.width = `${pct}%`;
+        tempText.textContent = `Température: ${Math.round(pct)}%`;
+        tempBar.classList.remove('overheat', 'warning','danger');
+        if (pct >= 100) tempBar.classList.add('overheat');
+        else if (pct >= 75) tempBar.classList.add('danger');
+        else if (pct >= 50) tempBar.classList.add('warning');
+    }
+    
     // Render all game objects
     function renderGameObjects(objects) {
         // Garder une référence aux objets existants pour éviter les recréations inutiles
@@ -269,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderedIds = new Set();
         
         // Créer ou mettre à jour les objets de jeu
-        sortedObjects.forEach(obj => {
+        objects.forEach(obj => {
             // Ignorer les objets sans données correctes
             if (!obj || !obj.hasOwnProperty('id')) return;
             
@@ -305,16 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
             element.style.left = `${obj.x}%`;
             element.style.top = `${obj.y}%`;
 
-            if (obj.z_index !== undefined) {
-                element.style.zIndex = obj.z_index;
-                //print in the console : 
-                console.log(`Setting z-index for ${obj.id} to ${obj.z_index}`);
-            } else {
-                element.style.zIndex = 0; 
-                //print in the console :
-                console.log(`No z-index set for ${obj.id}, defaulting to 0`);
-                
-            }
             
             // Appliquer les propriétés d'image si présentes
             if (obj.image) {
@@ -428,7 +476,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 shoot_up: shootUpBtn,
                 shoot_down: shootDownBtn,
                 shoot_left: shootLeftBtn,
-                shoot_right: shootRightBtn
+                shoot_right: shootRightBtn,
+                cool: coolBtn,
+                shield_up: shieldUpBtn,
+                shield_down: shieldDownBtn,
+                shield_left: shieldLeftBtn,
+                shield_right: shieldRightBtn
             };
             if (btnMap[key]) {
                 btnMap[key].classList.add('active');
@@ -450,7 +503,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 shoot_up: shootUpBtn,
                 shoot_down: shootDownBtn,
                 shoot_left: shootLeftBtn,
-                shoot_right: shootRightBtn
+                shoot_right: shootRightBtn,
+                cool: coolBtn,
+                shield_up: shieldUpBtn,
+                shield_down: shieldDownBtn,
+                shield_left: shieldLeftBtn,
+                shield_right: shieldRightBtn
             };
             if (btnMap[key]) {
                 btnMap[key].classList.remove('active');
@@ -518,6 +576,42 @@ document.addEventListener('DOMContentLoaded', () => {
     shootRightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_right'); });
     shootRightBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_right'); });
     
+    // Setup cool button
+    coolBtn.addEventListener('mousedown', () => handleKeyDown('cool'));
+    coolBtn.addEventListener('mouseup', () => handleKeyUp('cool'));
+    coolBtn.addEventListener('mouseleave', () => handleKeyUp('cool'));
+    coolBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('cool'); });
+    coolBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('cool'); });
+    
+    // Setup shield buttons
+    shieldUpBtn.addEventListener('mousedown', () => handleKeyDown('shield_up'));
+    shieldUpBtn.addEventListener('mouseup', () => handleKeyUp('shield_up'));
+    shieldUpBtn.addEventListener('mouseleave', () => handleKeyUp('shield_up'));
+    shieldUpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield_up'); });
+    shieldUpBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield_up'); });
+    shieldUpBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield_up'); });
+
+    shieldLeftBtn.addEventListener('mousedown', () => handleKeyDown('shield_left'));
+    shieldLeftBtn.addEventListener('mouseup', () => handleKeyUp('shield_left'));
+    shieldLeftBtn.addEventListener('mouseleave', () => handleKeyUp('shield_left'));
+    shieldLeftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield_left'); });
+    shieldLeftBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield_left'); });
+    shieldLeftBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield_left'); });
+
+    shieldRightBtn.addEventListener('mousedown', () => handleKeyDown('shield_right'));
+    shieldRightBtn.addEventListener('mouseup', () => handleKeyUp('shield_right'));
+    shieldRightBtn.addEventListener('mouseleave', () => handleKeyUp('shield_right'));
+    shieldRightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield_right'); });
+    shieldRightBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield_right'); });
+    shieldRightBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield_right'); });
+
+    shieldDownBtn.addEventListener('mousedown', () => handleKeyDown('shield_down'));
+    shieldDownBtn.addEventListener('mouseup', () => handleKeyUp('shield_down'));
+    shieldDownBtn.addEventListener('mouseleave', () => handleKeyUp('shield_down'));
+    shieldDownBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield_down'); });
+    shieldDownBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield_down'); });
+    shieldDownBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield_down'); });
+
     // Add keyboard controls
     document.addEventListener('keydown', (e) => {
         if (!isConnected || gameArea.classList.contains('hidden')) return;
@@ -554,6 +648,26 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'd':
                 e.preventDefault();
                 handleKeyDown('shoot_right');
+                break;
+            case 'c':
+                e.preventDefault();
+                handleKeyDown('cool');
+                break;
+            case 'i':
+                e.preventDefault();
+                handleKeyDown('shield_up');
+                break;
+            case 'k':
+                e.preventDefault();
+                handleKeyDown('shield_down');
+                break;
+            case 'j':
+                e.preventDefault();
+                handleKeyDown('shield_left');
+                break;
+            case 'l':
+                e.preventDefault();
+                handleKeyDown('shield_right');
                 break;
         }
     });
@@ -593,6 +707,26 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'd':
                 e.preventDefault();
                 handleKeyUp('shoot_right');
+                break;
+            case 'c':
+                e.preventDefault();
+                handleKeyUp('cool');
+                break;
+            case 'i':
+                e.preventDefault();
+                handleKeyUp('shield_up');
+                break;
+            case 'k':
+                e.preventDefault();
+                handleKeyUp('shield_down');
+                break;
+            case 'j':
+                e.preventDefault();
+                handleKeyUp('shield_left');
+                break;
+            case 'l':
+                e.preventDefault();
+                handleKeyUp('shield_right');
                 break;
         }
     });
@@ -655,5 +789,79 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') {
             joinBtn.click();
         }
+    });
+
+    // Aim slider and shoot button
+    const aimSlider = document.getElementById('aimSlider');
+    const aimShootBtn = document.getElementById('aimShootBtn');
+    let currentAim = 0;
+    aimSlider.addEventListener('input', () => {
+        currentAim = parseInt(aimSlider.value);
+    });
+    aimShootBtn.addEventListener('click', () => {
+        if (socket && isConnected) {
+            socket.emit('rotate_shoot', { angle: currentAim });
+        }
+    });
+
+    // circular knob aim
+    const knob = document.getElementById('aimKnob');
+    const pointer = document.getElementById('knobPointer');
+    const fireBtn = document.getElementById('aimHoldBtn');
+    let drag = false, fireInterval = null;
+
+    knob.addEventListener('mousedown', e => { drag = true; });
+    document.addEventListener('mouseup',   e => { drag = false; });
+    document.addEventListener('mousemove', e => {
+        if (!drag) return;
+        const rect = knob.getBoundingClientRect();
+        const cx = rect.left + rect.width/2;
+        const cy = rect.top  + rect.height/2;
+        const dx = e.clientX - cx, dy = e.clientY - cy;
+        let angleDeg = Math.atan2(dy, dx) * 180/Math.PI;
+        if (angleDeg < 0) angleDeg += 360;
+        currentAim = angleDeg;
+        pointer.style.transform = `translate(-50%, -100%) rotate(${angleDeg}deg)`;
+    });
+
+    // touch support for knob
+    knob.addEventListener('touchstart', e => { drag = true; e.preventDefault(); });
+    document.addEventListener('touchend',   e => { drag = false; });
+    document.addEventListener('touchmove',  e => {
+        if (!drag) return;
+        const t = e.touches[0];
+        const rect = knob.getBoundingClientRect();
+        const cx = rect.left + rect.width/2;
+        const cy = rect.top  + rect.height/2;
+        const dx = t.clientX - cx, dy = t.clientY - cy;
+        let angleDeg = Math.atan2(dy, dx) * 180/Math.PI;
+        if (angleDeg < 0) angleDeg += 360;
+        currentAim = angleDeg;
+        pointer.style.transform = `translate(-50%, -100%) rotate(${angleDeg}deg)`;
+    });
+
+    // hold-to-shoot
+    fireBtn.addEventListener('mousedown', () => {
+        if (fireInterval) return;
+        fireInterval = setInterval(() => {
+            if (socket && isConnected) socket.emit('rotate_shoot', { angle: currentAim });
+        }, 200);  // fire every 200ms
+    });
+    document.addEventListener('mouseup', () => {
+        clearInterval(fireInterval);
+        fireInterval = null;
+    });
+
+    // touch support for fire
+    fireBtn.addEventListener('touchstart', e => {
+        e.preventDefault();
+        if (fireInterval) return;
+        fireInterval = setInterval(() => {
+            if (socket && isConnected) socket.emit('rotate_shoot', { angle: currentAim });
+        }, 200);
+    });
+    fireBtn.addEventListener('touchend', () => {
+        clearInterval(fireInterval);
+        fireInterval = null;
     });
 });

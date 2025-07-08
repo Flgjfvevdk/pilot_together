@@ -1,8 +1,10 @@
 from key_touch import KeyTouch
 from vector import Vector
 from collider import Collider
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Union, Any, TYPE_CHECKING
 from tag import Tag
+if TYPE_CHECKING:
+    from game import Game
 
 class GameObject:
     """

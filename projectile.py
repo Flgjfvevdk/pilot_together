@@ -58,7 +58,7 @@ class Projectile(GameObject):
         
         # Check if the projectile is out of bounds (e.g., off-screen)
         if self.position.x < -10 or self.position.x > 110 or self.position.y < -10 or self.position.y > 110:
-            self.die()  # Mark projectile as inactive for removal
+            self.die()  
     
     def on_collision(self, other: 'GameObject', other_id: str = None) -> None:
         """

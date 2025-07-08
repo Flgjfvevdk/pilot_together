@@ -1,18 +1,22 @@
 from game_object_with_health import GameObjectWithHealth
 from key_touch import KeyTouch
 from spacecannon import SpaceCannon
+from shield_cannon import ShieldCannon
 from vector import Vector
 from typing import Dict, Optional, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from game import Game
 from tag import Tag
+from overheat import Overheat
+import math
 
 class SpaceShip(GameObjectWithHealth):
     """
     A spaceship that can be controlled by players.
     """
     def __init__(self, game:'Game', x: float = 50, y: float = 50, speed: float = 25, 
-                 max_health: float = 100, socketio=None, z_index: int = 10):
+                 max_health: float = 100, socketio=None, z_index: int = 10, 
+                 projectile_speed: float = 200.0, projetile_damage: float = 5.0, reload_time: float = 0.3):
         """
         Initialize a new spaceship.
         
@@ -25,11 +29,13 @@ class SpaceShip(GameObjectWithHealth):
             socketio: Socket.IO instance for real-time updates
             z_index (int): Rendering order (higher values are rendered on top)
         """
-        super().__init__(game=game, x=x, y=y, width=8, height=8, max_health=max_health, tag=Tag.PLAYER, z_index=z_index)
+        super().__init__(game=game, x=x, y=y, width=6, height=6, max_health=max_health, tag=Tag.PLAYER, z_index=z_index)
         self.speed: float = speed  # Units per second
         self.max_x: float = 100  # Maximum x coordinate (percentage)
         self.max_y: float = 100  # Maximum y coordinate (percentage)
         self.socketio = socketio  # Socket.IO pour les mises à jour en temps réel
+
+        self.repair_value: float = 1.0 
         
         # Set up collider (slightly smaller than the ship for better gameplay)
         self.add_collider(
@@ -38,12 +44,32 @@ class SpaceShip(GameObjectWithHealth):
             offset_x=0,
             offset_y=0
         )
+
+        self.projectile_speed: float = projectile_speed  
+        self.reload_time: float = reload_time 
+        self.projetile_damage: float = projetile_damage
         
         self.set_image('/static/img/spaceship.png', self.width, self.height)
 
-        self.init_space_cannons_direction()
+        self.init_space_cannons_direction(reload_time=self.reload_time, speed=self.projectile_speed)
+        
+        # Overheat management
+        self.overheat = Overheat()
+        self.init_shield_cannons_direction(reload_time=2.0)
+        self.heat_shoot = 3.0
+        self.heat_shield = 10.0
 
-    def init_space_cannons_direction(self, reload_time: float = 1.0) -> None:
+        # Rotating cannon setup using SpaceCannon
+        self.rotating_cannon = SpaceCannon(
+            x=self.position.x, y=self.position.y,
+            direction=Vector(1, 0),      # placeholder
+            game=self.game,
+            reload_time=self.reload_time,
+            projectile_speed=self.projectile_speed
+        )
+        self.linked_game_objects.append(self.rotating_cannon)
+
+    def init_space_cannons_direction(self, reload_time: float = 0.4, speed:float = 150.0) -> None:
         self.space_cannons_directions: Dict[str, SpaceCannon] = {
             'up': SpaceCannon(
                 x=self.position.x,
@@ -51,7 +77,8 @@ class SpaceShip(GameObjectWithHealth):
                 direction=Vector(0, -1),
                 game=self.game,
                 targets=[Tag.ENEMY],
-                reload_time=reload_time),
+                reload_time=reload_time,
+                projectile_speed=speed),
                 
             'down': SpaceCannon(
                 x=self.position.x,
@@ -59,24 +86,43 @@ class SpaceShip(GameObjectWithHealth):
                 direction=Vector(0, 1),
                 game=self.game,
                 targets=[Tag.ENEMY],
-                reload_time=reload_time),
+                reload_time=reload_time,
+                projectile_speed=speed),
             'left': SpaceCannon(
                 x=self.position.x,
                 y=self.position.y,
                 direction=Vector(-1, 0),
                 game=self.game,
                 targets=[Tag.ENEMY],
-                reload_time=reload_time),
+                reload_time=reload_time,
+                projectile_speed=speed),
             'right': SpaceCannon(
                 x=self.position.x,
                 y=self.position.y,
                 direction=Vector(1, 0),
                 game=self.game,
                 targets=[Tag.ENEMY],
-                reload_time=reload_time)
+                reload_time=reload_time,
+                projectile_speed=speed)
         }
         self.linked_game_objects = list(self.space_cannons_directions.values()).copy()
 
+    def init_shield_cannons_direction(self, reload_time: float) -> None:
+        dirs = {
+            'up':    Vector(0, -1),
+            'down':  Vector(0, 1),
+            'left':  Vector(-1, 0),
+            'right': Vector(1, 0)
+        }
+        self.shield_cannons: Dict[str, ShieldCannon] = {}
+        for key, vec in dirs.items():
+            cannon = ShieldCannon(
+                x=self.position.x, y=self.position.y,
+                direction=vec,
+                game=self.game,
+                reload_time=reload_time
+            )
+            self.shield_cannons[key] = cannon
 
     def move(self, move_vector_direction: Vector, speed: Optional[float] = None) -> bool:
         """
@@ -119,7 +165,18 @@ class SpaceShip(GameObjectWithHealth):
             delta_time (float): Time elapsed since last update in seconds
         """
         self.manage_movement(player_keys, delta_time)
-        self.manage_cannon(player_keys)
+        if self.overheat.can_act():
+            self.manage_cannon(player_keys)
+            self.manage_shield(player_keys)
+        # Overheat cooling key
+        cool_active = any(
+            keys.get('cool') and keys['cool'].is_active()
+            for keys in player_keys.values()
+        )
+        if cool_active:
+            self.overheat.cool_down(delta_time)
+        else:
+            self.overheat.stop_cooling()
         
         
     def manage_movement(self, player_keys: Dict[int, Dict[str, KeyTouch]], delta_time:float) -> None:
@@ -152,10 +209,40 @@ class SpaceShip(GameObjectWithHealth):
                     direction_shoot[key.key_name] = True
 
         for dir, isActive in direction_shoot.items():
-            if isActive:
-                dir_shot:str = dir.removeprefix("shoot_")
-                self.space_cannons_directions[dir_shot].shoot(damage=10.0)
+            if isActive :
+                dir_shot = dir.removeprefix("shoot_")
+                has_shoot:bool = self.space_cannons_directions[dir_shot].shoot(damage=self.projetile_damage)
+                if has_shoot:
+                    self.overheat.add_heat(self.heat_shoot)
 
+    def manage_shield(self, player_keys: Dict[int, Dict[str, KeyTouch]]) -> None:
+        """
+        Handle input for the shield cannon based on player keys.
+        
+        Args:
+            player_keys (dict[int, dict[str, KeyTouch]]): Dictionary of player keys
+        """
+        for direction, cannon in self.shield_cannons.items():
+            cannon.set_position(self.position.x, self.position.y)
+            active = any(
+                keys.get(f'shield_{direction}') and keys[f'shield_{direction}'].is_active()
+                for keys in player_keys.values()
+            )
+            if active:
+                has_shoot:bool = cannon.shoot()
+                if has_shoot:
+                    self.overheat.add_heat(self.heat_shield)
+
+    def rotate_and_shoot(self, angle: float) -> None:
+        """
+        Aim by angle and fire rotating cannon.
+        """
+        # update cannon direction
+        dir_vec = Vector.from_angle(math.radians(angle))
+        self.rotating_cannon.direction = dir_vec.normalize()
+        # keep position in sync
+        self.rotating_cannon.set_position(self.position.x, self.position.y)
+        self.rotating_cannon.shoot(damage=self.projetile_damage)
 
     def getHit(self, damage: float) -> float:
         """
@@ -181,6 +268,21 @@ class SpaceShip(GameObjectWithHealth):
         
         return remaining_health
 
+    def repair(self) -> float:
+        """
+        Heal the spaceship and emit a health update event.
+        """
+        new_health = self.heal(self.repair_value)
+        if self.socketio:
+            health_data = {
+                'health': {
+                    'current': new_health,
+                    'max': self.getMaxHealth()
+                }
+            }
+            self.socketio.emit('spaceship_health_update', health_data)
+        return new_health
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert the spaceship data to a dictionary for sending to clients.
@@ -188,6 +290,8 @@ class SpaceShip(GameObjectWithHealth):
         Returns:
             dict: Spaceship data
         """
-        # Utiliser directement la méthode de la classe parente pour assurer la cohérence
-        return super().to_dict()
+        data = super().to_dict()
+        data['temperature'] = self.overheat.temperature
+        data['maxTemperature'] = self.overheat.max_temp
+        return data
 

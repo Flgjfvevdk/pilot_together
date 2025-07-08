@@ -13,10 +13,10 @@ class SpaceCannon:
     A space cannon that can shoot projectiles in a specified direction.
     """
     def __init__(self, x: float, y: float, direction:Vector, 
-                 game: 'Game', projectile_speed: float = 1.0, 
+                 game: 'Game', projectile_speed: float = 150.0, 
                  targets: List[Tag] = None,
                  img_url:str='/static/img/green.png', 
-                 projectile_width: float = 3, projectile_height: float = 3, reload_time: float = 1):
+                 projectile_width: float = 4, projectile_height: float = 4, reload_time: float = 0.5):
         """
         Initialize a new space cannon.
         
@@ -40,7 +40,7 @@ class SpaceCannon:
         self.reload_time: float = reload_time
         self.last_shot_time: float = 0  # Track when the cannon was last fired
         
-    def shoot(self, damage: float, direction: Vector = None) -> Optional[str]:
+    def shoot(self, damage: float, direction: Vector = None) -> bool:
         """
         Shoot a projectile in the specified direction.
         
@@ -49,15 +49,15 @@ class SpaceCannon:
             damage (float): Amount of damage the projectile will deal
             
         Returns:
-            Optional[str]: ID of the created projectile, or None if failed
+            bool: True if the projectile was successfully created, False if not ready to fire
         """
         if self.game is None:
-            return None
+            return False
         
         # Check if enough time has elapsed since the last shot
         current_time = time.time()
         if current_time - self.last_shot_time < self.reload_time:
-            return None  # Not ready to fire yet
+            return False  # Not ready to fire yet
         
         if direction is None:
             direction = self.direction
@@ -82,7 +82,7 @@ class SpaceCannon:
         # Update the last shot time
         self.last_shot_time = current_time
         
-        return projectile_id
+        return True
     
     def set_position(self, x: float, y: float) -> None:
         """
