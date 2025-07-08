@@ -109,13 +109,39 @@ def handle_repair():
     # Heal via la méthode spaceship.repair(), qui émet déjà health_update
     game.spaceship.repair()
 
+@socketio.on('weapon_select')
+def handle_weapon_select(data):
+    """
+    Handle weapon selection change from a player.
+    
+    Args:
+        data: Dictionary with weapon selection
+    """
+    player_id = request.sid
+    if 'weapon' in data:
+        weapon = data['weapon']
+        if player_id in game.player_keys and 'weapon' in game.player_keys[player_id]:
+            game.player_keys[player_id]['weapon'].set_value(weapon)
+            logging.info(f"Player {player_id} selected weapon {weapon}")
+
 @socketio.on('rotate_shoot')
 def handle_rotate_shoot(data):
     """
-    Receive angle from client and fire rotating cannon.
+    Handle rotating cannon shoot request.
     """
-    angle = data.get('angle', 0)
-    game.spaceship.rotate_and_shoot(angle)
+    player_id = request.sid
+    if player_id in game.player_keys:
+        # Mettre à jour l'angle si présent
+        if 'angle' in data:
+            angle = data.get('angle', 0)
+            game.handle_key_value_update(player_id, 'angle', angle)
+        
+        # Activer ou désactiver le tir
+        if 'firing' in data:
+            if data['firing']:
+                game.handle_key_press(player_id, 'shoot', time.time())
+            else:
+                game.handle_key_release(player_id, 'shoot')
 
 def get_local_ip():
     """Get the local IP address to display connection info"""

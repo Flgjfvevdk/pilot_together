@@ -21,11 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const leftBtn = document.getElementById('leftBtn');
     const rightBtn = document.getElementById('rightBtn');
     
-    // Shoot buttons
-    const shootUpBtn = document.getElementById('shootUpBtn');
-    const shootDownBtn = document.getElementById('shootDownBtn');
-    const shootLeftBtn = document.getElementById('shootLeftBtn');
-    const shootRightBtn = document.getElementById('shootRightBtn');
     const coolBtn = document.getElementById('coolBtn');
     
     // Shield button
@@ -40,6 +35,16 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRepair = Math.floor(Math.random() * repairBtns.length);
         repairBtns[activeRepair].classList.add('active');
     }
+
+    // Weapon selection buttons
+    const weaponBtns = [
+        document.getElementById('weapon1Btn'),
+        document.getElementById('weapon2Btn'),
+        document.getElementById('weapon3Btn'),
+        document.getElementById('weapon4Btn')
+    ];
+
+    let currentWeapon = 1; // Default weapon selection
 
     // setup listeners
     repairBtns.forEach((btn, idx) => {
@@ -90,12 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
         down: false,
         left: false,
         right: false,
-        shoot_up: false,
-        shoot_down: false,
-        shoot_left: false,
-        shoot_right: false,
         cool: false,
-        shield: false // Remplacé les 4 directions par un seul shield
+        shield: false,
+        weapon: 1 // Default weapon selection
     };
     
     // Initialize the game connection
@@ -467,12 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 down: downBtn, 
                 left: leftBtn, 
                 right: rightBtn,
-                shoot_up: shootUpBtn,
-                shoot_down: shootDownBtn,
-                shoot_left: shootLeftBtn,
-                shoot_right: shootRightBtn,
                 cool: coolBtn,
-                shield: shieldBtn // Remplacer les 4 directions par un seul shield
+                shield: shieldBtn
             };
             if (btnMap[key]) {
                 btnMap[key].classList.add('active');
@@ -491,12 +489,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 down: downBtn, 
                 left: leftBtn, 
                 right: rightBtn,
-                shoot_up: shootUpBtn,
-                shoot_down: shootDownBtn,
-                shoot_left: shootLeftBtn,
-                shoot_right: shootRightBtn,
                 cool: coolBtn,
-                shield: shieldBtn // Remplacer les 4 directions par un seul shield
+                shield: shieldBtn
             };
             if (btnMap[key]) {
                 btnMap[key].classList.remove('active');
@@ -534,36 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
     rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('right'); });
     rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('right'); });
     
-    // Setup shoot buttons
-    shootUpBtn.addEventListener('mousedown', () => handleKeyDown('shoot_up'));
-    shootUpBtn.addEventListener('mouseup', () => handleKeyUp('shoot_up'));
-    shootUpBtn.addEventListener('mouseleave', () => handleKeyUp('shoot_up'));
-    
-    shootDownBtn.addEventListener('mousedown', () => handleKeyDown('shoot_down'));
-    shootDownBtn.addEventListener('mouseup', () => handleKeyUp('shoot_down'));
-    shootDownBtn.addEventListener('mouseleave', () => handleKeyUp('shoot_down'));
-    
-    shootLeftBtn.addEventListener('mousedown', () => handleKeyDown('shoot_left'));
-    shootLeftBtn.addEventListener('mouseup', () => handleKeyUp('shoot_left'));
-    shootLeftBtn.addEventListener('mouseleave', () => handleKeyUp('shoot_left'));
-    
-    shootRightBtn.addEventListener('mousedown', () => handleKeyDown('shoot_right'));
-    shootRightBtn.addEventListener('mouseup', () => handleKeyUp('shoot_right'));
-    shootRightBtn.addEventListener('mouseleave', () => handleKeyUp('shoot_right'));
-    
-    // For touch devices - shoot buttons
-    shootUpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_up'); });
-    shootUpBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_up'); });
-    
-    shootDownBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_down'); });
-    shootDownBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_down'); });
-    
-    shootLeftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_left'); });
-    shootLeftBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_left'); });
-    
-    shootRightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shoot_right'); });
-    shootRightBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shoot_right'); });
-    
     // Setup cool button
     coolBtn.addEventListener('mousedown', () => handleKeyDown('cool'));
     coolBtn.addEventListener('mouseup', () => handleKeyUp('cool'));
@@ -571,13 +535,38 @@ document.addEventListener('DOMContentLoaded', () => {
     coolBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('cool'); });
     coolBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('cool'); });
     
-    // Setup shield button (remplace les 4 boutons directionnels)
+    // Setup shield button
     shieldBtn.addEventListener('mousedown', () => handleKeyDown('shield'));
     shieldBtn.addEventListener('mouseup', () => handleKeyUp('shield'));
     shieldBtn.addEventListener('mouseleave', () => handleKeyUp('shield'));
     shieldBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('shield'); });
     shieldBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('shield'); });
     shieldBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleKeyUp('shield'); });
+
+    // Setup weapon selection buttons
+    weaponBtns.forEach((btn, index) => {
+        const weaponNumber = index + 1;
+        
+        // Ajout de classes CSS spécifiques à chaque arme
+        btn.classList.add(`weapon-${weaponNumber}`);
+        
+        btn.addEventListener('click', () => {
+            // Deselect all buttons
+            weaponBtns.forEach(b => b.classList.remove('active'));
+            
+            // Select the clicked button
+            btn.classList.add('active');
+            
+            // Update weapon selection
+            currentWeapon = weaponNumber;
+            
+            // Emit weapon selection change
+            if (isConnected) {
+                pressedKeys.weapon = currentWeapon;
+                socket.emit('weapon_select', { weapon: currentWeapon });
+            }
+        });
+    });
 
     // Add keyboard controls
     document.addEventListener('keydown', (e) => {
@@ -600,21 +589,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault(); // Prevent page scrolling
                 handleKeyDown('right');
                 break;
-            case 'w':
-                e.preventDefault();
-                handleKeyDown('shoot_up');
-                break;
-            case 's': // Une seule touche pour le shield
+            case 's': 
                 e.preventDefault();
                 handleKeyDown('shield');
-                break;
-            case 'a':
-                e.preventDefault();
-                handleKeyDown('shoot_left');
-                break;
-            case 'd':
-                e.preventDefault();
-                handleKeyDown('shoot_right');
                 break;
             case 'c':
                 e.preventDefault();
@@ -643,21 +620,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault(); // Prevent page scrolling
                 handleKeyUp('right');
                 break;
-            case 'w':
-                e.preventDefault();
-                handleKeyUp('shoot_up');
-                break;
-            case 's': // Une seule touche pour le shield
+            case 's': 
                 e.preventDefault();
                 handleKeyUp('shield');
-                break;
-            case 'a':
-                e.preventDefault();
-                handleKeyUp('shoot_left');
-                break;
-            case 'd':
-                e.preventDefault();
-                handleKeyUp('shoot_right');
                 break;
             case 'c':
                 e.preventDefault();
@@ -740,6 +705,22 @@ document.addEventListener('DOMContentLoaded', () => {
         let isFiring = false;
         let firingInterval = null;
         
+        // Afficher les infos sur l'arme actuelle
+        function updateWeaponInfo() {
+            const weaponInfo = {
+                1: { name: "Canon 1", color: "#2ecc71" },  // Vert
+                2: { name: "Canon 2", color: "#e74c3c" },  // Rouge
+                3: { name: "Canon 3", color: "#3498db" },  // Bleu
+                4: { name: "Canon 4", color: "#f39c12" }   // Jaune/orange
+            };
+            
+            // Ajouter le texte de l'arme
+            ctx.fillStyle = weaponInfo[currentWeapon].color;
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(weaponInfo[currentWeapon].name, centerX, centerY + 25);
+        }
+        
         // Dessiner le cercle d'aide et la ligne de direction
         function drawAim() {
             // Effacer le canvas
@@ -757,17 +738,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const endX = centerX + radius * Math.cos(radians);
             const endY = centerY + radius * Math.sin(radians);
             
+            // Couleur basée sur l'arme sélectionnée
+            const weaponColors = {
+                1: '#2ecc71', // Vert
+                2: '#e74c3c', // Rouge
+                3: '#3498db', // Bleu
+                4: '#f39c12'  // Jaune/orange
+            };
+            
+            const lineColor = isFiring ? 
+                weaponColors[currentWeapon] : 
+                '#7a7a7a';
+            
             ctx.beginPath();
             ctx.moveTo(centerX, centerY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = isFiring ? '#ff3a3a' : '#ff7a7a';
+            ctx.strokeStyle = lineColor;
             ctx.lineWidth = 3;
             ctx.stroke();
             
             // Dessiner le point au bout de la ligne
             ctx.beginPath();
             ctx.arc(endX, endY, 5, 0, 2 * Math.PI);
-            ctx.fillStyle = isFiring ? '#ff3a3a' : '#ff7a7a';
+            ctx.fillStyle = lineColor;
             ctx.fill();
             
             // Dessiner l'angle en texte
@@ -775,6 +768,9 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.font = '14px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(`${Math.round(currentAngle)}°`, centerX, centerY + 5);
+            
+            // Ajouter les infos sur l'arme
+            updateWeaponInfo();
         }
         
         // Calculer l'angle en fonction de la position du clic
@@ -795,7 +791,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             firingInterval = setInterval(() => {
                 if (socket && isConnected) {
-                    socket.emit('rotate_shoot', { angle: currentAngle });
+                    // Plus simple: envoyer l'angle et l'état du tir
+                    socket.emit('rotate_shoot', { 
+                        angle: currentAngle,
+                        firing: true
+                    });
                 }
             }, 200);
         }
@@ -807,6 +807,12 @@ document.addEventListener('DOMContentLoaded', () => {
             isFiring = false;
             clearInterval(firingInterval);
             firingInterval = null;
+            
+            // Informer le serveur que le tir est arrêté
+            if (socket && isConnected) {
+                socket.emit('rotate_shoot', { firing: false });
+            }
+            
             drawAim(); // Redessiner avec la couleur normale
         }
         

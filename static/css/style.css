@@ -150,13 +150,14 @@ button:hover {
     margin-top: 15px;
 }
 
+/* Ajustement de la mise en page après suppression de la section de tir */
 .controls.first-row {
     flex-wrap: nowrap;
     justify-content: space-between;
 }
 
 .controls.first-row .controls-section {
-    width: 32%;  /* Trois sections égales */
+    width: 48%;  /* Deux sections égales au lieu de trois */
 }
 
 .controls.second-row {
@@ -431,7 +432,7 @@ button:hover {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 25%;
+    width: 35%; /* Un peu plus large pour l'interface de visée */
 }
 
 .aim-container {
@@ -469,4 +470,84 @@ button:hover {
 .angle-indicator,
 .fire-button {
     display: none;
+}
+
+/* Weapon selector styles - updated with weapon-specific colors */
+.weapon-selector {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.weapon-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+    border-radius: 50%;
+    background-color: #3a1a1a;
+    border: 2px solid #d13a3a;
+    color: #ff7a7a;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    padding: 0;
+}
+
+/* Arme standard (verte) */
+.weapon-btn.weapon-1 {
+    background-color: #1a3a1a;
+    border: 2px solid #2ecc71;
+    color: #2ecc71;
+}
+.weapon-btn.weapon-1:hover {
+    background-color: #254025;
+}
+.weapon-btn.weapon-1.active {
+    background-color: #2ecc71;
+    color: #1a3a1a;
+}
+
+/* Arme lourde (rouge) */
+.weapon-btn.weapon-2 {
+    background-color: #3a1a1a;
+    border: 2px solid #e74c3c;
+    color: #e74c3c;
+}
+.weapon-btn.weapon-2:hover {
+    background-color: #4d2525;
+}
+.weapon-btn.weapon-2.active {
+    background-color: #e74c3c;
+    color: white;
+}
+
+/* Arme rapide (bleue) */
+.weapon-btn.weapon-3 {
+    background-color: #1a2a3a;
+    border: 2px solid #3498db;
+    color: #3498db;
+}
+.weapon-btn.weapon-3:hover {
+    background-color: #25354d;
+}
+.weapon-btn.weapon-3.active {
+    background-color: #3498db;
+    color: white;
+}
+
+/* Arme explosive (jaune) */
+.weapon-btn.weapon-4 {
+    background-color: #3a3a1a;
+    border: 2px solid #f39c12;
+    color: #f39c12;
+}
+.weapon-btn.weapon-4:hover {
+    background-color: #4d4d25;
+}
+.weapon-btn.weapon-4.active {
+    background-color: #f39c12;
+    color: white;
 }

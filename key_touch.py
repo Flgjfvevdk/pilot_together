@@ -5,16 +5,18 @@ class KeyTouch:
     Represents a keyboard key that can be pressed or released.
     Used to track player input state.
     """
-    def __init__(self, key_name: str):
+    def __init__(self, key_name: str, value: Any = None):
         """
         Initialize a new key touch.
         
         Args:
             key_name (str): The name/identifier of the key
+            value (any): Optional value associated with this key
         """
         self.key_name: str = key_name
         self.is_pressed: bool = False
         self.last_pressed: float = 0  # Timestamp of last press
+        self.value = value  # Added value for storing weapon selection
     
     def press(self, timestamp: Optional[float] = None) -> bool:
         """
@@ -52,6 +54,24 @@ class KeyTouch:
             bool: True if the key is pressed, False otherwise
         """
         return self.is_pressed
+    
+    def set_value(self, value: Any) -> None:
+        """
+        Set the value associated with this key.
+        
+        Args:
+            value (any): The new value
+        """
+        self.value = value
+        
+    def get_value(self) -> Any:
+        """
+        Get the value associated with this key.
+        
+        Returns:
+            any: The value
+        """
+        return self.value
     
     def to_dict(self) -> Dict[str, Any]:
         """

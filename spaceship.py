@@ -59,15 +59,22 @@ class SpaceShip(GameObjectWithHealth):
         self.heat_shoot = 3.0
         self.heat_shield = 20.0  # Augmenté car il n'y a qu'un seul shield plus puissant
 
-        # Rotating cannon setup using SpaceCannon
-        self.rotating_cannon = SpaceCannon(
-            x=self.position.x, y=self.position.y,
-            direction=Vector(1, 0),      # placeholder
-            game=self.game,
-            reload_time=self.reload_time,
-            projectile_speed=self.projectile_speed
-        )
-        self.linked_game_objects.append(self.rotating_cannon)
+        # Initialisation des 4 canons rotatifs (tous identiques)
+        self.rotating_cannons = {}
+        for i in range(1, 5):  # Canons 1 à 4
+            self.rotating_cannons[i] = SpaceCannon(
+                x=self.position.x, y=self.position.y,
+                direction=Vector(1, 0),
+                game=self.game,
+                reload_time=self.reload_time,
+                projectile_speed=self.projectile_speed,
+                img_url='/static/img/green.png',
+                projectile_width=3, projectile_height=3
+            )
+        
+        # Ajouter tous les canons aux objets liés
+        for cannon in self.rotating_cannons.values():
+            self.linked_game_objects.append(cannon)
 
     def init_space_cannons_direction(self, reload_time: float = 0.4, speed:float = 150.0) -> None:
         self.space_cannons_directions: Dict[str, SpaceCannon] = {
@@ -115,10 +122,10 @@ class SpaceShip(GameObjectWithHealth):
             direction=Vector(0, 0),  # Direction non utilisée car vitesse = 0
             game=self.game,
             speed=0.0,  # Le bouclier reste sur place
-            reload_time=5.0,  # Temps de recharge plus long
-            barrier_lifespan=4.0,  # Durée de vie plus longue
-            width=24.0,  # Bouclier plus large
-            height=24.0  # Bouclier plus haut
+            reload_time=5.0, 
+            barrier_lifespan=3.0,  
+            width=24.0, 
+            height=24.0 
         )
 
     def move(self, move_vector_direction: Vector, speed: Optional[float] = None) -> bool:
@@ -165,6 +172,8 @@ class SpaceShip(GameObjectWithHealth):
         if self.overheat.can_act():
             self.manage_cannon(player_keys)
             self.manage_shield(player_keys)
+            self.manage_rotate_cannon(player_keys)  # Nouveau: gère le canon rotatif
+        
         # Overheat cooling key
         cool_active = any(
             keys.get('cool') and keys['cool'].is_active()
@@ -174,8 +183,7 @@ class SpaceShip(GameObjectWithHealth):
             self.overheat.cool_down(delta_time)
         else:
             self.overheat.stop_cooling()
-        
-        
+
     def manage_movement(self, player_keys: Dict[int, Dict[str, KeyTouch]], delta_time:float) -> None:
         move_vector: Vector = Vector(0, 0)
         for keys in player_keys.values():
@@ -185,7 +193,6 @@ class SpaceShip(GameObjectWithHealth):
                         move_vector += Vector.from_direction(key.key_name)
         if move_vector.magnitude() > 0:
             self.move(move_vector, self.speed * delta_time)
-
 
     def manage_cannon(self, player_keys: Dict[int, Dict[str, KeyTouch]]) -> None:
         """
@@ -233,16 +240,43 @@ class SpaceShip(GameObjectWithHealth):
             if has_shoot:
                 self.overheat.add_heat(self.heat_shield)
 
-    def rotate_and_shoot(self, angle: float) -> None:
+    def manage_rotate_cannon(self, player_keys: Dict[int, Dict[str, KeyTouch]]) -> None:
         """
-        Aim by angle and fire rotating cannon.
+        Gère le tir du canon rotatif basé sur les touches des joueurs.
+        
+        Args:
+            player_keys (dict[int, dict[str, KeyTouch]]): Dictionnaire des touches des joueurs
         """
-        # update cannon direction
-        dir_vec = Vector.from_angle(math.radians(angle))
-        self.rotating_cannon.direction = dir_vec.normalize()
-        # keep position in sync
-        self.rotating_cannon.set_position(self.position.x, self.position.y)
-        self.rotating_cannon.shoot(damage=self.projetile_damage)
+        # Recherche un joueur qui tire avec le canon rotatif
+        for player_id, keys in player_keys.items():
+            if (keys.get('shoot') and keys.get('shoot').is_active() and 
+                keys.get('angle') is not None):
+                
+                # Récupérer l'angle et l'arme sélectionnée
+                angle = keys.get('angle').get_value()
+                weapon_key = keys.get('weapon')
+                weapon = weapon_key.get_value() if weapon_key else 1
+                
+                # S'assurer que l'arme est dans les limites valides
+                weapon = max(1, min(4, weapon))
+                
+                # Récupérer le canon correspondant à l'arme
+                cannon = self.rotating_cannons[weapon]
+                
+                # Mettre à jour la direction du canon
+                dir_vec = Vector.from_angle(math.radians(angle))
+                cannon.direction = dir_vec.normalize()
+                
+                # Mettre à jour la position
+                cannon.set_position(self.position.x, self.position.y)
+                
+                # Tirer avec le canon sélectionné (même dégâts pour tous les canons)
+                has_shot = cannon.shoot(damage=self.projetile_damage)
+                if has_shot:
+                    # Même chaleur générée pour tous les canons
+                    self.overheat.add_heat(self.heat_shoot)
+                
+                
 
     def getHit(self, damage: float) -> float:
         """

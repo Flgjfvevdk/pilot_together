@@ -223,7 +223,10 @@ class Game:
             'shoot_left':  KeyTouch('shoot_left'),
             'shoot_right': KeyTouch('shoot_right'),
             'cool':        KeyTouch('cool'),
-            'shield':      KeyTouch('shield')
+            'shield':      KeyTouch('shield'),
+            'weapon':      KeyTouch('weapon', 1),  # Initial weapon = 1
+            'angle':       KeyTouch('angle', 0),   # Initial angle = 0
+            'shoot':       KeyTouch('shoot')       # Key to control rotational firing
         }
         
         logging.info(f"Player {name} (ID: {player_id}) joined the game")
@@ -300,6 +303,19 @@ class Game:
         if player_id in self.player_keys and key_name in self.player_keys[player_id]:
             self.player_keys[player_id][key_name].release()
             logging.debug(f"Player {player_id} released {key_name}")
+    
+    def handle_key_value_update(self, player_id: str, key_name: str, value: Any) -> None:
+        """
+        Update the value of a key for a player.
+        
+        Args:
+            player_id (str): Player's unique identifier
+            key_name (str): Name of the key
+            value (Any): New value for the key
+        """
+        if player_id in self.player_keys and key_name in self.player_keys[player_id]:
+            self.player_keys[player_id][key_name].set_value(value)
+            logging.debug(f"Player {player_id} updated {key_name} to {value}")
     
     def get_last_active_player(self) -> Optional[str]:
         """
