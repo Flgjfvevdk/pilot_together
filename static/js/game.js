@@ -791,77 +791,149 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Aim slider and shoot button
-    const aimSlider = document.getElementById('aimSlider');
-    const aimShootBtn = document.getElementById('aimShootBtn');
-    let currentAim = 0;
-    aimSlider.addEventListener('input', () => {
-        currentAim = parseInt(aimSlider.value);
-    });
-    aimShootBtn.addEventListener('click', () => {
-        if (socket && isConnected) {
-            socket.emit('rotate_shoot', { angle: currentAim });
+    // Setup aim canvas
+    function setupAimCanvas() {
+        const canvas = document.getElementById('aimCanvas');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = (canvas.width / 2) - 10;
+        
+        let currentAngle = 0;
+        let isFiring = false;
+        let firingInterval = null;
+        
+        // Dessiner le cercle d'aide et la ligne de direction
+        function drawAim() {
+            // Effacer le canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Dessiner le cercle d'aide
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#3a70d1';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // Dessiner la ligne de direction
+            const radians = currentAngle * Math.PI / 180;
+            const endX = centerX + radius * Math.cos(radians);
+            const endY = centerY + radius * Math.sin(radians);
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = isFiring ? '#ff3a3a' : '#ff7a7a';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Dessiner le point au bout de la ligne
+            ctx.beginPath();
+            ctx.arc(endX, endY, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = isFiring ? '#ff3a3a' : '#ff7a7a';
+            ctx.fill();
+            
+            // Dessiner l'angle en texte
+            ctx.fillStyle = '#7ab5ff';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${Math.round(currentAngle)}°`, centerX, centerY + 5);
         }
-    });
+        
+        // Calculer l'angle en fonction de la position du clic
+        function calculateAngle(x, y) {
+            const dx = x - centerX;
+            const dy = y - centerY;
+            let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            if (angle < 0) angle += 360;
+            return angle;
+        }
+        
+        // Démarrer le tir
+        function startFiring() {
+            if (isFiring) return;
+            
+            isFiring = true;
+            drawAim(); // Redessiner avec la couleur de tir
+            
+            firingInterval = setInterval(() => {
+                if (socket && isConnected) {
+                    socket.emit('rotate_shoot', { angle: currentAngle });
+                }
+            }, 200);
+        }
+        
+        // Arrêter le tir
+        function stopFiring() {
+            if (!isFiring) return;
+            
+            isFiring = false;
+            clearInterval(firingInterval);
+            firingInterval = null;
+            drawAim(); // Redessiner avec la couleur normale
+        }
+        
+        // Gestionnaire d'événements pour le clic sur le canvas
+        canvas.addEventListener('mousedown', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            currentAngle = calculateAngle(x, y);
+            drawAim();
+            startFiring();
+        });
+        
+        canvas.addEventListener('mousemove', function(e) {
+            if (!isFiring) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            currentAngle = calculateAngle(x, y);
+            drawAim();
+        });
+        
+        document.addEventListener('mouseup', function() {
+            stopFiring();
+        });
+        
+        // Support tactile
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            
+            currentAngle = calculateAngle(x, y);
+            drawAim();
+            startFiring();
+        });
+        
+        canvas.addEventListener('touchmove', function(e) {
+            if (!isFiring) return;
+            e.preventDefault();
+            
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            
+            currentAngle = calculateAngle(x, y);
+            drawAim();
+        });
+        
+        document.addEventListener('touchend', function() {
+            stopFiring();
+        });
+        
+        // Initialiser le dessin
+        drawAim();
+    }
 
-    // circular knob aim
-    const knob = document.getElementById('aimKnob');
-    const pointer = document.getElementById('knobPointer');
-    const fireBtn = document.getElementById('aimHoldBtn');
-    let drag = false, fireInterval = null;
-
-    knob.addEventListener('mousedown', e => { drag = true; });
-    document.addEventListener('mouseup',   e => { drag = false; });
-    document.addEventListener('mousemove', e => {
-        if (!drag) return;
-        const rect = knob.getBoundingClientRect();
-        const cx = rect.left + rect.width/2;
-        const cy = rect.top  + rect.height/2;
-        const dx = e.clientX - cx, dy = e.clientY - cy;
-        let angleDeg = Math.atan2(dy, dx) * 180/Math.PI;
-        if (angleDeg < 0) angleDeg += 360;
-        currentAim = angleDeg;
-        pointer.style.transform = `translate(-50%, -100%) rotate(${angleDeg}deg)`;
-    });
-
-    // touch support for knob
-    knob.addEventListener('touchstart', e => { drag = true; e.preventDefault(); });
-    document.addEventListener('touchend',   e => { drag = false; });
-    document.addEventListener('touchmove',  e => {
-        if (!drag) return;
-        const t = e.touches[0];
-        const rect = knob.getBoundingClientRect();
-        const cx = rect.left + rect.width/2;
-        const cy = rect.top  + rect.height/2;
-        const dx = t.clientX - cx, dy = t.clientY - cy;
-        let angleDeg = Math.atan2(dy, dx) * 180/Math.PI;
-        if (angleDeg < 0) angleDeg += 360;
-        currentAim = angleDeg;
-        pointer.style.transform = `translate(-50%, -100%) rotate(${angleDeg}deg)`;
-    });
-
-    // hold-to-shoot
-    fireBtn.addEventListener('mousedown', () => {
-        if (fireInterval) return;
-        fireInterval = setInterval(() => {
-            if (socket && isConnected) socket.emit('rotate_shoot', { angle: currentAim });
-        }, 200);  // fire every 200ms
-    });
-    document.addEventListener('mouseup', () => {
-        clearInterval(fireInterval);
-        fireInterval = null;
-    });
-
-    // touch support for fire
-    fireBtn.addEventListener('touchstart', e => {
-        e.preventDefault();
-        if (fireInterval) return;
-        fireInterval = setInterval(() => {
-            if (socket && isConnected) socket.emit('rotate_shoot', { angle: currentAim });
-        }, 200);
-    });
-    fireBtn.addEventListener('touchend', () => {
-        clearInterval(fireInterval);
-        fireInterval = null;
-    });
+    setupAimCanvas();
 });
