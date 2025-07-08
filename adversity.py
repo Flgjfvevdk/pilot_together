@@ -29,6 +29,10 @@ class Adversity(GameObject):
         self.spawn_interval_enemy: float = 10.0  # Spawn an enemy ship every 10 seconds by default
         self.last_spawn_time_enemy: float = 0.0
         self.active: bool = True
+        
+        # Damages
+        self.asteroid_damage: float = 2.0  # Default asteroid damage
+        self.enemy_damage: float = 5.0    # Default enemy projectile damage
 
     def update(self, players: Dict, player_keys: Dict, delta_time: float) -> None:
         """
@@ -75,8 +79,8 @@ class Adversity(GameObject):
             y: float = random.uniform(0, 100)
             direction: Vector = Vector(-1, random.uniform(-1, 1))  # Moving left
 
-        # Create the asteroid and add it to the game
-        asteroid: Asteroid = Asteroid(game = self.game, x=x, y=y, direction=direction)
+        # Create the asteroid and add it to the game with configured damage
+        asteroid: Asteroid = Asteroid(game=self.game, x=x, y=y, direction=direction, damage=self.asteroid_damage)
         self.game.add_game_object(asteroid)
 
     def spawn_enemyship(self) -> None:
@@ -98,9 +102,11 @@ class Adversity(GameObject):
             x = 105;  y = random.uniform(0, 100)
             direction = Vector(-1, random.uniform(-1, 1))
 
+        # Create enemy ship with configured damage
         enemy = EnemyShip(
             game=self.game,
             x=x, y=y,
-            direction=direction
+            direction=direction,
+            damage=self.enemy_damage
         )
         self.game.add_game_object(enemy)

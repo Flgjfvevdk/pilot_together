@@ -75,6 +75,9 @@ class SpaceShip(GameObjectWithHealth):
         # Ajouter tous les canons aux objets liés
         for cannon in self.rotating_cannons.values():
             self.linked_game_objects.append(cannon)
+            
+        # Nombre de canons actifs (par défaut tous)
+        self.active_cannons = 4
 
     def init_space_cannons_direction(self, reload_time: float = 0.4, speed:float = 150.0) -> None:
         self.space_cannons_directions: Dict[str, SpaceCannon] = {
@@ -257,26 +260,49 @@ class SpaceShip(GameObjectWithHealth):
                 weapon_key = keys.get('weapon')
                 weapon = weapon_key.get_value() if weapon_key else 1
                 
-                # S'assurer que l'arme est dans les limites valides
+                # S'assurer que l'arme est dans les limites valides et active
                 weapon = max(1, min(4, weapon))
+                if weapon > self.active_cannons:
+                    # Utiliser le premier canon si celui demandé n'est pas actif
+                    weapon = min(1, self.active_cannons)
                 
-                # Récupérer le canon correspondant à l'arme
-                cannon = self.rotating_cannons[weapon]
+                # Ne tirer que si au moins un canon est actif
+                if self.active_cannons > 0:
+                    # Récupérer le canon correspondant à l'arme
+                    cannon = self.rotating_cannons[weapon]
+                    
+                    # Mettre à jour la direction du canon
+                    dir_vec = Vector.from_angle(math.radians(angle))
+                    cannon.direction = dir_vec.normalize()
+                    
+                    # Mettre à jour la position
+                    cannon.set_position(self.position.x, self.position.y)
+                    
+                    # Tirer avec le canon sélectionné (même dégâts pour tous les canons)
+                    has_shot = cannon.shoot(damage=self.projetile_damage)
+                    if has_shot:
+                        # Même chaleur générée pour tous les canons
+                        self.overheat.add_heat(self.heat_shoot)
                 
-                # Mettre à jour la direction du canon
-                dir_vec = Vector.from_angle(math.radians(angle))
-                cannon.direction = dir_vec.normalize()
-                
-                # Mettre à jour la position
-                cannon.set_position(self.position.x, self.position.y)
-                
-                # Tirer avec le canon sélectionné (même dégâts pour tous les canons)
-                has_shot = cannon.shoot(damage=self.projetile_damage)
-                if has_shot:
-                    # Même chaleur générée pour tous les canons
-                    self.overheat.add_heat(self.heat_shoot)
-                
-                
+                break
+
+    def set_active_cannons(self, count: int) -> None:
+        """
+        Définit le nombre de canons actifs sur le vaisseau.
+        
+        Args:
+            count (int): Le nombre de canons actifs (0-4)
+        """
+        # S'assurer que la valeur est dans les limites
+        self.active_cannons = max(0, min(4, count))
+        
+        # Notifier les clients si socketio est disponible
+        if self.socketio:
+            self.socketio.emit('update_active_cannons', {'active_cannons': self.active_cannons})
+        
+        # Journaliser le changement
+        import logging
+        logging.info(f"Spaceship active cannons set to {self.active_cannons}")
 
     def getHit(self, damage: float) -> float:
         """
@@ -327,5 +353,6 @@ class SpaceShip(GameObjectWithHealth):
         data = super().to_dict()
         data['temperature'] = self.overheat.temperature
         data['maxTemperature'] = self.overheat.max_temp
+        data['active_cannons'] = self.active_cannons
         return data
 

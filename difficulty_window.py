@@ -18,23 +18,39 @@ class DifficultyWindow:
     MAX_ENEMY_INTERVAL: float = 20.0
     DEFAULT_ENEMY_INTERVAL: float = 10.0
     
+    MIN_ASTEROID_DAMAGE: float = 1.0
+    MAX_ASTEROID_DAMAGE: float = 20.0
+    DEFAULT_ASTEROID_DAMAGE: float = 2.0
+    
+    MIN_ENEMY_DAMAGE: float = 1.0
+    MAX_ENEMY_DAMAGE: float = 20.0
+    DEFAULT_ENEMY_DAMAGE: float = 5.0
+    
     def __init__(self, parent: tk.Tk, game_instance: 'Game') -> None:
         self.game: 'Game' = game_instance
         self.parent: tk.Tk = parent
         self.adversity: Optional[Adversity] = None
         self.spawn_interval_asteroid: float = self.DEFAULT_ASTEROID_INTERVAL
         self.spawn_interval_enemy: float = self.DEFAULT_ENEMY_INTERVAL
+        self.asteroid_damage: float = self.DEFAULT_ASTEROID_DAMAGE
+        self.enemy_damage: float = self.DEFAULT_ENEMY_DAMAGE
+        
         self.window: tk.Toplevel = tk.Toplevel(parent)
         self.value_var_asteroid: tk.StringVar = tk.StringVar(value=str(self.spawn_interval_asteroid))
         self.value_var_enemy: tk.StringVar = tk.StringVar(value=str(self.spawn_interval_enemy))
+        self.value_var_asteroid_damage: tk.StringVar = tk.StringVar(value=str(self.asteroid_damage))
+        self.value_var_enemy_damage: tk.StringVar = tk.StringVar(value=str(self.enemy_damage))
+        
         self.entry_asteroid: tk.Entry = None  # Will be assigned later
         self.slider_asteroid: tk.Scale = None  # Will be assigned later
         self.entry_enemy: tk.Entry = None  # Will be assigned later
         self.slider_enemy: tk.Scale = None  # Will be assigned later
+        self.entry_asteroid_damage: tk.Entry = None
+        self.entry_enemy_damage: tk.Entry = None
         
         # Create the window
         self.window.title("Paramètres de Difficulté")
-        self.window.geometry("400x600")  # Légèrement plus grand pour accommoder les nouvelles options
+        self.window.geometry("600x800") 
         self.window.configure(bg="#1a1a2e")
         self.window.resizable(False, False)
         self.window.transient(parent)  # Set as a transient window to parent
@@ -47,46 +63,58 @@ class DifficultyWindow:
         content_frame: tk.Frame = tk.Frame(self.window, bg="#1a1a2e")
         content_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
-        # Label for section
+        # Section 1: Asteroid spawn frequency
         tk.Label(content_frame, text="Fréquence de spawn des astéroïdes", 
                  font=("Arial", 12), bg="#1a1a2e", fg="white").pack(pady=5)
         
-        # Entry box for direct input
-        entry_frame: tk.Frame = tk.Frame(content_frame, bg="#1a1a2e")
-        entry_frame.pack(fill=tk.X, pady=10)
+        entry_frame_asteroid = tk.Frame(content_frame, bg="#1a1a2e")
+        entry_frame_asteroid.pack(fill=tk.X, pady=10)
         
-        tk.Label(entry_frame, text="Intervalle (secondes):", 
+        tk.Label(entry_frame_asteroid, text="Intervalle (secondes):", 
                  bg="#1a1a2e", fg="white").pack(side=tk.LEFT)
         
-        self.entry_asteroid = tk.Entry(entry_frame, textvariable=self.value_var_asteroid, width=10)
+        self.entry_asteroid = tk.Entry(entry_frame_asteroid, textvariable=self.value_var_asteroid, width=10)
         self.entry_asteroid.pack(side=tk.LEFT, padx=10)
         self.entry_asteroid.bind("<Return>", self.update_asteroid_from_entry)
         
-        # Info about values
-        info_label = tk.Label(content_frame, 
-                             text=f"Note: Réglez à 0 pour désactiver, ou utilisez des valeurs de {self.MIN_ASTEROID_INTERVAL} à {self.MAX_ASTEROID_INTERVAL}",
-                             bg="#1a1a2e", fg="#aaaaaa", font=("Arial", 8))
-        info_label.pack(pady=2)
+        tk.Label(content_frame, text=f"Note: Réglez à 0 pour désactiver, ou utilisez des valeurs de {self.MIN_ASTEROID_INTERVAL} à {self.MAX_ASTEROID_INTERVAL}",
+                 bg="#1a1a2e", fg="#aaaaaa", font=("Arial", 8), wraplength=360).pack(pady=2)
         
-        # Slider with logarithmic scale (internally 0-100, transformed to MIN-MAX)
         self.slider_asteroid = tk.Scale(content_frame, 
-                             from_=0, to=100,  # Internal scale
-                             resolution=1,
-                             orient=tk.HORIZONTAL,
-                             label="Désactivé (0) | Rapide ← → Lent",
-                             length=300,
-                             bg="#252544",
-                             fg="white",
-                             highlightthickness=0,
-                             troughcolor="#0a0a18",
-                             activebackground="#3a70d1",
-                             command=self.update_asteroid_from_slider)
+                                      from_=0, to=100,  # Internal scale
+                                      resolution=1,
+                                      orient=tk.HORIZONTAL,
+                                      label="Désactivé (0) | Rapide ← → Lent",
+                                      length=300,
+                                      bg="#252544",
+                                      fg="white",
+                                      highlightthickness=0,
+                                      troughcolor="#0a0a18",
+                                      activebackground="#3a70d1",
+                                      command=self.update_asteroid_from_slider)
         
         # Set initial slider position from spawn_interval
         self.set_asteroid_slider_from_value(self.spawn_interval_asteroid)
         self.slider_asteroid.pack(fill=tk.X, pady=10)
 
-        # Enemy ship spawn controls
+        # Section 2: Nouvelle section - Dégâts des astéroïdes
+        tk.Label(content_frame, text="Dégâts des astéroïdes", 
+                 font=("Arial", 12), bg="#1a1a2e", fg="white").pack(pady=5)
+        
+        damage_frame_asteroid = tk.Frame(content_frame, bg="#1a1a2e")
+        damage_frame_asteroid.pack(fill=tk.X, pady=10)
+        
+        tk.Label(damage_frame_asteroid, text="Dégâts par impact:", 
+                 bg="#1a1a2e", fg="white").pack(side=tk.LEFT)
+        
+        self.entry_asteroid_damage = tk.Entry(damage_frame_asteroid, textvariable=self.value_var_asteroid_damage, width=10)
+        self.entry_asteroid_damage.pack(side=tk.LEFT, padx=10)
+        self.entry_asteroid_damage.bind("<Return>", self.update_asteroid_damage)
+        
+        tk.Label(content_frame, text=f"Valeurs recommandées: {self.MIN_ASTEROID_DAMAGE} à {self.MAX_ASTEROID_DAMAGE}",
+                 bg="#1a1a2e", fg="#aaaaaa", font=("Arial", 8), wraplength=360).pack(pady=2)
+
+        # Section 3: Enemy ship spawn frequency
         tk.Label(content_frame, text="Fréquence de spawn des vaisseaux ennemis",
                  font=("Arial", 12), bg="#1a1a2e", fg="white").pack(pady=5)
 
@@ -100,7 +128,7 @@ class DifficultyWindow:
 
         tk.Label(content_frame,
                  text=f"Note: Réglez à 0 pour désactiver, ou utilisez des valeurs de {self.MIN_ENEMY_INTERVAL} à {self.MAX_ENEMY_INTERVAL}",
-                 bg="#1a1a2e", fg="#aaaaaa", font=("Arial", 8)).pack(pady=2)
+                 bg="#1a1a2e", fg="#aaaaaa", font=("Arial", 8), wraplength=360).pack(pady=2)
 
         self.slider_enemy = tk.Scale(content_frame,
                                      from_=0, to=100, resolution=1, orient=tk.HORIZONTAL,
@@ -111,6 +139,23 @@ class DifficultyWindow:
                                      command=self.update_enemy_from_slider)
         self.set_enemy_slider_from_value(self.spawn_interval_enemy)
         self.slider_enemy.pack(fill=tk.X, pady=10)
+
+        # Section 4: Nouvelle section - Dégâts des projectiles ennemis
+        tk.Label(content_frame, text="Dégâts des projectiles ennemis", 
+                 font=("Arial", 12), bg="#1a1a2e", fg="white").pack(pady=5)
+        
+        damage_frame_enemy = tk.Frame(content_frame, bg="#1a1a2e")
+        damage_frame_enemy.pack(fill=tk.X, pady=10)
+        
+        tk.Label(damage_frame_enemy, text="Dégâts par projectile:", 
+                 bg="#1a1a2e", fg="white").pack(side=tk.LEFT)
+        
+        self.entry_enemy_damage = tk.Entry(damage_frame_enemy, textvariable=self.value_var_enemy_damage, width=10)
+        self.entry_enemy_damage.pack(side=tk.LEFT, padx=10)
+        self.entry_enemy_damage.bind("<Return>", self.update_enemy_damage)
+        
+        tk.Label(content_frame, text=f"Valeurs recommandées: {self.MIN_ENEMY_DAMAGE} à {self.MAX_ENEMY_DAMAGE}",
+                 bg="#1a1a2e", fg="#aaaaaa", font=("Arial", 8), wraplength=360).pack(pady=2)
         
         # Button frame
         button_frame: tk.Frame = tk.Frame(content_frame, bg="#1a1a2e")
@@ -120,13 +165,9 @@ class DifficultyWindow:
         tk.Button(button_frame, text="Désactiver", command=self.disable_spawn,
                  bg="#b53a3a", fg="white", padx=10).pack(side=tk.LEFT)
                  
-        tk.Button(button_frame, text=f"Normal ({self.DEFAULT_ASTEROID_INTERVAL}s)", 
-                 command=lambda: self.set_preset(self.DEFAULT_ASTEROID_INTERVAL),
+        tk.Button(button_frame, text=f"Normal", 
+                 command=lambda: self.set_all_defaults(),
                  bg="#3a70d1", fg="white", padx=10).pack(side=tk.LEFT, padx=10)
-
-        tk.Button(button_frame, text=f"Lent ({self.MAX_ASTEROID_INTERVAL/2.5:.1f}s)", 
-                 command=lambda: self.set_preset(self.MAX_ASTEROID_INTERVAL/2.5),
-                 bg="#3a70d1", fg="white", padx=10).pack(side=tk.LEFT, padx=0)
         
         # Close button
         tk.Button(button_frame, text="Fermer", command=self.window.destroy,
@@ -137,32 +178,78 @@ class DifficultyWindow:
         self.adversity = None
         self.spawn_interval_asteroid = self.DEFAULT_ASTEROID_INTERVAL  # Default value
         self.spawn_interval_enemy = self.DEFAULT_ENEMY_INTERVAL  # Default value
+        self.asteroid_damage = self.DEFAULT_ASTEROID_DAMAGE  # Default value
+        self.enemy_damage = self.DEFAULT_ENEMY_DAMAGE  # Default value
         
-        # Look for the adversity object to get its current spawn interval
+        # Look for the adversity object to get its current values
         for obj_id, obj in self.game.game_objects.items():
             if isinstance(obj, Adversity):
                 self.adversity = obj
                 self.spawn_interval_asteroid = obj.spawn_interval_asteroid
                 self.spawn_interval_enemy = obj.spawn_interval_enemy
+                if hasattr(obj, 'asteroid_damage'):
+                    self.asteroid_damage = obj.asteroid_damage
+                if hasattr(obj, 'enemy_damage'):
+                    self.enemy_damage = obj.enemy_damage
                 break
+                
+        self.value_var_asteroid_damage.set(str(self.asteroid_damage))
+        self.value_var_enemy_damage.set(str(self.enemy_damage))
+    
+    def update_asteroid_damage(self, event: Optional[tk.Event] = None) -> None:
+        """Mettre à jour les dégâts des astéroïdes."""
+        try:
+            value = float(self.value_var_asteroid_damage.get())
+            value = max(self.MIN_ASTEROID_DAMAGE, min(self.MAX_ASTEROID_DAMAGE, value))
+            value = round(value, 1)
+            self.value_var_asteroid_damage.set(str(value))
+            if self.adversity:
+                self.adversity.asteroid_damage = value
+                self.asteroid_damage = value
+                logging.info(f"Updated asteroid damage to {value}")
+        except ValueError:
+            self.value_var_asteroid_damage.set(str(self.asteroid_damage))
+    
+    def update_enemy_damage(self, event: Optional[tk.Event] = None) -> None:
+        """Mettre à jour les dégâts des projectiles ennemis."""
+        try:
+            value = float(self.value_var_enemy_damage.get())
+            value = max(self.MIN_ENEMY_DAMAGE, min(self.MAX_ENEMY_DAMAGE, value))
+            value = round(value, 1)
+            self.value_var_enemy_damage.set(str(value))
+            if self.adversity:
+                self.adversity.enemy_damage = value
+                self.enemy_damage = value
+                logging.info(f"Updated enemy projectile damage to {value}")
+        except ValueError:
+            self.value_var_enemy_damage.set(str(self.enemy_damage))
+    
+    def set_all_defaults(self) -> None:
+        """Set all values to their defaults."""
+        self.value_var_asteroid.set(f"{self.DEFAULT_ASTEROID_INTERVAL:.2f}")
+        self.set_asteroid_slider_from_value(self.DEFAULT_ASTEROID_INTERVAL)
+        self.update_asteroid_value(self.DEFAULT_ASTEROID_INTERVAL)
+        
+        self.value_var_enemy.set(f"{self.DEFAULT_ENEMY_INTERVAL:.2f}")
+        self.set_enemy_slider_from_value(self.DEFAULT_ENEMY_INTERVAL)
+        self.update_enemy_value(self.DEFAULT_ENEMY_INTERVAL)
+        
+        self.value_var_asteroid_damage.set(str(self.DEFAULT_ASTEROID_DAMAGE))
+        self.update_asteroid_damage()
+        
+        self.value_var_enemy_damage.set(str(self.DEFAULT_ENEMY_DAMAGE))
+        self.update_enemy_damage()
     
     def update_asteroid_from_slider(self, slider_pos: str) -> None:
         """Convert slider position to actual value using logarithmic scale"""
         try:
             slider_pos_float: float = float(slider_pos)
-            
-            # Special case: 0 = disabled
             if slider_pos_float == 0:
                 value: float = 0
             else:
-                # Transform slider position (1-100) to value
-                # For a nice logarithmic scale: 1 maps to MIN, 100 maps to MAX
-                # Normalize slider to 0-1 range (excluding 0 position)
                 normalized: float = (slider_pos_float - 1) / 99.0
-                # Apply logarithmic transformation
                 value = self.MIN_ASTEROID_INTERVAL * math.pow(self.MAX_ASTEROID_INTERVAL/self.MIN_ASTEROID_INTERVAL, normalized)
-                value = round(value, 2)  # Round to 2 decimal places
-                
+                value = round(value, 2)
             self.value_var_asteroid.set(f"{value:.2f}")
             self.update_asteroid_value(value)
         except ValueError:
@@ -171,19 +258,12 @@ class DifficultyWindow:
     def set_asteroid_slider_from_value(self, value: float) -> None:
         """Convert actual value to slider position using logarithmic scale"""
         if value <= 0:
-            # Special case: disabled
             self.slider_asteroid.set(0)
         else:
-            # Ensure value is within bounds
             value_clamped: float = max(self.MIN_ASTEROID_INTERVAL, min(self.MAX_ASTEROID_INTERVAL, value))
-            
-            # Transform value to slider position (1-100)
-            # Calculate logarithmic position
             normalized: float = 0
             if value_clamped >= self.MIN_ASTEROID_INTERVAL:
                 normalized = math.log(value_clamped / self.MIN_ASTEROID_INTERVAL) / math.log(self.MAX_ASTEROID_INTERVAL / self.MIN_ASTEROID_INTERVAL)
-            
-            # Map to slider range (1-100)
             slider_pos: float = 1 + normalized * 99
             self.slider_asteroid.set(int(slider_pos))
     
@@ -191,35 +271,23 @@ class DifficultyWindow:
         """Update the slider and game value when entry changes."""
         try:
             value: float = float(self.value_var_asteroid.get())
-            # Clamp to min/max values (allowing 0)
             value = max(0, min(self.MAX_ASTEROID_INTERVAL, value))
-            # Round to 2 decimal places
             value = round(value, 2)
-            # Update the slider
             self.set_asteroid_slider_from_value(value)
-            # Update the game
             self.update_asteroid_value(value)
         except ValueError:
-            # Reset to current value if entry is invalid
             self.value_var_asteroid.set(f"{self.spawn_interval_asteroid:.2f}")
     
     def update_enemy_from_slider(self, slider_pos: str) -> None:
         """Convert slider position to actual value using logarithmic scale for enemy ships"""
         try:
             slider_pos_float: float = float(slider_pos)
-            
-            # Special case: 0 = disabled
             if slider_pos_float == 0:
                 value: float = 0
             else:
-                # Transform slider position (1-100) to value
-                # For a nice logarithmic scale: 1 maps to MIN, 100 maps to MAX
-                # Normalize slider to 0-1 range (excluding 0 position)
                 normalized: float = (slider_pos_float - 1) / 99.0
-                # Apply logarithmic transformation
                 value = self.MIN_ENEMY_INTERVAL * math.pow(self.MAX_ENEMY_INTERVAL/self.MIN_ENEMY_INTERVAL, normalized)
-                value = round(value, 2)  # Round to 2 decimal places
-                
+                value = round(value, 2)
             self.value_var_enemy.set(f"{value:.2f}")
             self.update_enemy_value(value)
         except ValueError:
@@ -228,19 +296,12 @@ class DifficultyWindow:
     def set_enemy_slider_from_value(self, value: float) -> None:
         """Convert actual value to slider position using logarithmic scale for enemy ships"""
         if value <= 0:
-            # Special case: disabled
             self.slider_enemy.set(0)
         else:
-            # Ensure value is within bounds
             value_clamped: float = max(self.MIN_ENEMY_INTERVAL, min(self.MAX_ENEMY_INTERVAL, value))
-            
-            # Transform value to slider position (1-100)
-            # Calculate logarithmic position
             normalized: float = 0
             if value_clamped >= self.MIN_ENEMY_INTERVAL:
                 normalized = math.log(value_clamped / self.MIN_ENEMY_INTERVAL) / math.log(self.MAX_ENEMY_INTERVAL / self.MIN_ENEMY_INTERVAL)
-            
-            # Map to slider range (1-100)
             slider_pos: float = 1 + normalized * 99
             self.slider_enemy.set(int(slider_pos))
     
@@ -248,16 +309,11 @@ class DifficultyWindow:
         """Update the slider and game value when entry changes for enemy ships."""
         try:
             value: float = float(self.value_var_enemy.get())
-            # Clamp to min/max values (allowing 0)
             value = max(0, min(self.MAX_ENEMY_INTERVAL, value))
-            # Round to 2 decimal places
             value = round(value, 2)
-            # Update the slider
             self.set_enemy_slider_from_value(value)
-            # Update the game
             self.update_enemy_value(value)
         except ValueError:
-            # Reset to current value if entry is invalid
             self.value_var_enemy.set(f"{self.spawn_interval_enemy:.2f}")
     
     def disable_spawn(self) -> None:
@@ -282,8 +338,6 @@ class DifficultyWindow:
         if self.adversity:
             self.adversity.spawn_interval_asteroid = value
             self.spawn_interval_asteroid = value
-            
-            # Log the change with special message for disabled
             if value == 0:
                 logging.info("Asteroid spawning disabled")
             else:
@@ -294,8 +348,6 @@ class DifficultyWindow:
         if self.adversity:
             self.adversity.spawn_interval_enemy = value
             self.spawn_interval_enemy = value
-            
-            # Log the change with special message for disabled
             if value == 0:
                 logging.info("Enemy ship spawning disabled")
             else:

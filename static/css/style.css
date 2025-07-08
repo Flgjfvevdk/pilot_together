@@ -95,6 +95,10 @@ button:hover {
     color: #ff5d5d;
 }
 
+.paused {
+    color: #f39c12;
+}
+
 .hidden {
     display: none;
 }
@@ -550,4 +554,13 @@ button:hover {
 .weapon-btn.weapon-4.active {
     background-color: #f39c12;
     color: white;
+}
+
+/* Style pour les boutons d'armes désactivés */
+.weapon-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #666666 !important;
+    border-color: #888888 !important;
+    color: #aaaaaa !important;
 }

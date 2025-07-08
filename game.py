@@ -20,6 +20,7 @@ class Game:
         """
         self.socketio = socketio
         self.running: bool = False
+        self.game_active: bool = False  # Indique si le jeu est actif ou en pause
         self.update_thread: Optional[threading.Thread] = None
         self.update_interval: float = 0.01  # 20 updates per second
         
@@ -50,12 +51,36 @@ class Game:
             return
             
         self.running = True
+        self.game_active = True  # Marquer le jeu comme actif
         self.last_update_time = time.time()
         self.update_thread = threading.Thread(target=self._game_loop)
         self.update_thread.daemon = True
         self.update_thread.start()
         logging.info("Game loop started")
         
+        # Notifier les clients que le jeu a démarré
+        if self.socketio:
+            self.socketio.emit('game_started', {'active': True})
+    
+    def pause(self) -> None:
+        """Pause the game without stopping the thread"""
+        self.game_active = False
+        logging.info("Game paused")
+        
+        # Notifier les clients que le jeu est en pause
+        if self.socketio:
+            self.socketio.emit('game_paused', {'active': False})
+    
+    def resume(self) -> None:
+        """Resume the game after being paused"""
+        self.game_active = True
+        self.last_update_time = time.time()  # Reset time to avoid big jumps
+        logging.info("Game resumed")
+        
+        # Notifier les clients que le jeu a repris
+        if self.socketio:
+            self.socketio.emit('game_resumed', {'active': True})
+    
     def stop(self) -> None:
         """Stop the game loop"""
         self.running = False
@@ -67,11 +92,14 @@ class Game:
         """Main game update loop - runs in a separate thread"""
         while self.running:
             current_time: float = time.time()
-            delta_time: float = current_time - self.last_update_time
-            self.last_update_time = current_time
             
-            # Update game state
-            self.update(delta_time)
+            # Ne mettre à jour que si le jeu est actif
+            if self.game_active:
+                delta_time: float = current_time - self.last_update_time
+                self.last_update_time = current_time
+                
+                # Update game state
+                self.update(delta_time)
             
             # Sleep to maintain update frequency
             time.sleep(self.update_interval)

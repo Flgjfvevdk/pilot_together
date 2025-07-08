@@ -172,8 +172,8 @@ if __name__ == '__main__':
     game_manager.set_game(game)  # Pass the game instance to the window
     game_manager.update_status(f"Server running at http://{local_ip}:{port}")
     
-    # Start the game
-    game.start()
+    # Le jeu n'est plus démarré automatiquement ici
+    # game.start() <- supprimé
     
     # Start Flask in a separate thread
     flask_thread = threading.Thread(target=start_flask, args=('0.0.0.0', port))

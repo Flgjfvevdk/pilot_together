@@ -164,6 +164,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateShipHealthBar(data.health);
             }
         });
+
+        // Nouvel événement pour mettre à jour le nombre de canons actifs
+        socket.on('update_active_cannons', (data) => {
+            updateActiveWeapons(data.active_cannons);
+        });
+
+        // Nouveaux événements pour la pause et la reprise du jeu
+        socket.on('game_paused', (data) => {
+            gameStatus.textContent = 'Game paused. Please wait...';
+            gameStatus.className = 'paused';
+        });
+        
+        socket.on('game_resumed', (data) => {
+            gameStatus.textContent = 'Game resumed!';
+            gameStatus.className = '';
+            setTimeout(() => {
+                gameStatus.textContent = 'Game in progress...';
+            }, 2000);
+        });
+        
+        socket.on('game_started', (data) => {
+            gameStatus.textContent = 'Game started!';
+            gameStatus.className = '';
+            setTimeout(() => {
+                gameStatus.textContent = 'Game in progress...';
+            }, 2000);
+        });
     }
     
     // Update the displayed list of players
@@ -221,6 +248,10 @@ document.addEventListener('DOMContentLoaded', () => {
             updateShipHealthBar(shipObject.health);
             if (shipObject.temperature !== undefined) {
                 updateTemperatureBar(shipObject.temperature, shipObject.maxTemperature);
+            }
+            // Mettre à jour les canons actifs si disponible
+            if (shipObject.active_cannons !== undefined) {
+                updateActiveWeapons(shipObject.active_cannons);
             }
         }
     }
@@ -444,6 +475,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 colliderEl.style.transform = `translate(${collider.offsetX}px, ${collider.offsetY}px) rotate(${collider.angle}rad)`;
             });
         }
+    }
+    
+    // Fonction pour mettre à jour les boutons d'armes actives
+    function updateActiveWeapons(activeCount) {
+        // Mettre à jour les boutons d'armes
+        weaponBtns.forEach((btn, index) => {
+            const weaponNumber = index + 1;
+            
+            if (weaponNumber <= activeCount) {
+                // Activer le bouton
+                btn.disabled = false;
+                btn.classList.remove('disabled');
+            } else {
+                // Désactiver le bouton
+                btn.disabled = true;
+                btn.classList.add('disabled');
+                
+                // Si une arme désactivée était sélectionnée, revenir à la première arme
+                if (currentWeapon === weaponNumber) {
+                    // Trouver le premier bouton actif
+                    const firstActiveBtn = weaponBtns.find(b => !b.disabled);
+                    if (firstActiveBtn) {
+                        // Simuler un clic sur ce bouton
+                        firstActiveBtn.click();
+                    }
+                }
+            }
+        });
+        
+        // Afficher un message pour informer les joueurs
+        gameStatus.textContent = `Canons actifs: ${activeCount}/4`;
+        setTimeout(() => {
+            gameStatus.textContent = 'Game in progress...';
+        }, 3000);
     }
     
     // Send key state change to server
