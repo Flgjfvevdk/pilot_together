@@ -730,35 +730,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Setup control buttons
-    upBtn.addEventListener('mousedown', () => handleKeyDown('up'));
-    upBtn.addEventListener('mouseup', () => handleKeyUp('up'));
-    upBtn.addEventListener('mouseleave', () => handleKeyUp('up'));
+    // Reference to direction quadrants
+    const upQuadrant = document.getElementById('upBtn');
+    const downQuadrant = document.getElementById('downBtn');
+    const leftQuadrant = document.getElementById('leftBtn');
+    const rightQuadrant = document.getElementById('rightBtn');
     
-    downBtn.addEventListener('mousedown', () => handleKeyDown('down'));
-    downBtn.addEventListener('mouseup', () => handleKeyUp('down'));
-    downBtn.addEventListener('mouseleave', () => handleKeyUp('down'));
+    // Setup movement direction quadrants
+    setupDirectionQuadrant(upQuadrant, 'up');
+    setupDirectionQuadrant(downQuadrant, 'down');
+    setupDirectionQuadrant(leftQuadrant, 'left');
+    setupDirectionQuadrant(rightQuadrant, 'right');
     
-    leftBtn.addEventListener('mousedown', () => handleKeyDown('left'));
-    leftBtn.addEventListener('mouseup', () => handleKeyUp('left'));
-    leftBtn.addEventListener('mouseleave', () => handleKeyUp('left'));
-    
-    rightBtn.addEventListener('mousedown', () => handleKeyDown('right'));
-    rightBtn.addEventListener('mouseup', () => handleKeyUp('right'));
-    rightBtn.addEventListener('mouseleave', () => handleKeyUp('right'));
-    
-    // For touch devices
-    upBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('up'); });
-    upBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('up'); });
-    
-    downBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('down'); });
-    downBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('down'); });
-    
-    leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('left'); });
-    leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('left'); });
-    
-    rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleKeyDown('right'); });
-    rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleKeyUp('right'); });
+    function setupDirectionQuadrant(element, direction) {
+        // Mouse events
+        element.addEventListener('mousedown', () => {
+            element.classList.add('active');
+            handleKeyDown(direction);
+        });
+        
+        element.addEventListener('mouseup', () => {
+            element.classList.remove('active');
+            handleKeyUp(direction);
+        });
+        
+        element.addEventListener('mouseleave', () => {
+            element.classList.remove('active');
+            handleKeyUp(direction);
+        });
+        
+        // Touch events
+        element.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            element.classList.add('active');
+            handleKeyDown(direction);
+        });
+        
+        element.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            element.classList.remove('active');
+            handleKeyUp(direction);
+        });
+        
+        element.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            element.classList.remove('active');
+            handleKeyUp(direction);
+        });
+    }
     
     // Setup cool button
     coolBtn.addEventListener('mousedown', () => handleKeyDown('cool'));

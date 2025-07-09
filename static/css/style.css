@@ -565,55 +565,19 @@ button:hover {
     font-style: italic;
 }
 
-.aim-container {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    margin: 0 auto;
-}
-
-#aimCanvas {
-    border-radius: 50%;
-    background-color: #252544;
-    border: 3px solid #3a70d1;
-    cursor: crosshair;
-}
-
-.aim-crosshair {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 10px;
-    height: 10px;
-    background-color: transparent;
-    border: 2px solid #ff7a7a;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-}
-
-/* Suppression des styles précédents du slider */
-.circular-slider,
-.slider-track,
-.slider-handle,
-.slider-handle-positioned,
-.angle-indicator,
-.fire-button {
-    display: none;
-}
-
-/* Weapon selector styles - updated with weapon-specific colors */
 .weapon-selector {
     display: flex;
+    flex-direction: column; /* Changé de row (par défaut) à column pour alignement vertical */
     justify-content: center;
-    gap: 5px;
+    align-items: center; /* Centrer les boutons horizontalement dans la colonne */
+    gap: 8px; /* Augmenté légèrement l'espacement entre les boutons */
     margin-top: 8px;
 }
 
 .weapon-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 14px;
+    width: 36px; /* Boutons légèrement plus grands */
+    height: 36px;
+    font-size: 16px;
     border-radius: 50%;
     background-color: #3a1a1a;
     border: 2px solid #d13a3a;
@@ -727,4 +691,130 @@ button:hover {
     pointer-events: none;
     z-index: 99;
     opacity: 0.7;
+}
+
+/* Nouveau système de contrôle directionnel carré avec triangles */
+.direction-circle {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 10px auto;
+    border: 2px solid #3a70d1;
+    background-color: #1a243a;
+    overflow: hidden;
+}
+
+/* Style de base pour les triangles directionnels */
+.direction-slice {
+    position: absolute;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    background-color: rgba(58, 112, 209, 0.1);
+}
+
+.direction-slice:hover {
+    background-color: rgba(58, 112, 209, 0.3);
+}
+
+.direction-slice.active {
+    background-color: rgba(58, 112, 209, 0.6);
+}
+
+/* Positionnement et forme des triangles directionnels - base étendue sur tout le côté */
+.up-slice {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    /* Triangle pointant vers le centre avec base qui couvre tout le haut */
+    clip-path: polygon(0 0, 100% 0, 50% 100%, 0 0);
+}
+
+.right-slice {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 50%;
+    /* Triangle pointant vers le centre avec base qui couvre tout le côté droit */
+    clip-path: polygon(100% 0, 100% 100%, 0 50%, 100% 0);
+}
+
+.down-slice {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    /* Triangle pointant vers le centre avec base qui couvre tout le bas */
+    clip-path: polygon(0 100%, 100% 100%, 50% 0, 0 100%);
+}
+
+.left-slice {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 50%;
+    /* Triangle pointant vers le centre avec base qui couvre tout le côté gauche */
+    clip-path: polygon(0 0, 0 100%, 100% 50%, 0 0);
+}
+
+/* Style des flèches directionnelles */
+.direction-arrow {
+    position: absolute;
+    font-size: 24px;
+    color: #7ab5ff;
+    z-index: 1;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Positionnement correct des flèches directionnelles */
+.up-slice .direction-arrow {
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.right-slice .direction-arrow {
+    top: 50%;
+    right: 20%;
+    transform: translateY(-50%);
+}
+
+.down-slice .direction-arrow {
+    bottom: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.left-slice .direction-arrow {
+    top: 50%;
+    left: 20%;
+    transform: translateY(-50%);
+}
+
+/* Media queries pour les appareils mobiles */
+@media (max-width: 767px) {
+    .direction-circle {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .direction-arrow {
+        font-size: 20px;
+    }
+
+    /* Ajustement pour les boutons d'arme sur mobile */
+    .weapon-selector {
+        flex-direction: column;
+        gap: 6px; /* Espacement réduit sur mobile */
+    }
+    
+    .weapon-btn {
+        width: 30px; /* Boutons un peu plus petits sur mobile */
+        height: 30px;
+        font-size: 14px;
+    }
 }
