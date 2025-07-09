@@ -100,6 +100,166 @@ document.addEventListener('DOMContentLoaded', () => {
         weapon: 1 // Default weapon selection
     };
     
+    // Variables pour le tir par clic
+    let shipPosition = { x: 50, y: 50 }; // Position initiale du vaisseau (en pourcentage)
+    let isShooting = false;
+    let shootInterval = null;
+    let lastShootAngle = 0; // Stocke le dernier angle de tir
+
+    // Fonction pour calculer l'angle entre deux points (en degrés)
+    function calculateAngle(x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        // Conversion en degrés (0 à 360)
+        let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        if (angle < 0) angle += 360;
+        return angle;
+    }
+    
+    // Fonction pour créer un effet visuel de tir
+    function createShotEffect(x, y) {
+        const effect = document.createElement('div');
+        effect.className = 'shot-effect';
+        effect.style.left = `${x}%`;
+        effect.style.top = `${y}%`;
+        spaceshipContainer.appendChild(effect);
+        
+        // Supprimer l'effet après l'animation
+        setTimeout(() => {
+            effect.remove();
+        }, 400); // Correspond à la durée de l'animation
+    }
+    
+    // Fonction pour démarrer le tir
+    function startShooting(angle) {
+        if (isShooting) return;
+        
+        isShooting = true;
+        lastShootAngle = angle;
+        
+        // Envoyer immédiatement la première commande de tir
+        if (socket && isConnected) {
+            socket.emit('rotate_shoot', { 
+                angle: angle,
+                firing: true
+            });
+        }
+        
+        // Configurer le tir continu
+        shootInterval = setInterval(() => {
+            if (socket && isConnected) {
+                socket.emit('rotate_shoot', { 
+                    angle: lastShootAngle, // Utiliser l'angle le plus récent
+                    firing: true
+                });
+            }
+        }, 200); // Tirer toutes les 200ms
+    }
+    
+    // Fonction pour arrêter le tir
+    function stopShooting() {
+        if (!isShooting) return;
+        
+        isShooting = false;
+        clearInterval(shootInterval);
+        shootInterval = null;
+        
+        // Informer le serveur que le tir est arrêté
+        if (socket && isConnected) {
+            socket.emit('rotate_shoot', { firing: false });
+        }
+    }
+    
+    // Fonction pour gérer les clics sur le conteneur du vaisseau
+    function handleContainerClick(event) {
+        if (!isConnected || gameArea.classList.contains('hidden')) return;
+        
+        // Obtenir la position du clic en pourcentage par rapport au conteneur
+        const containerRect = spaceshipContainer.getBoundingClientRect();
+        const clickX = ((event.clientX - containerRect.left) / containerRect.width) * 100;
+        const clickY = ((event.clientY - containerRect.top) / containerRect.height) * 100;
+        
+        // Créer un effet visuel à l'endroit du clic
+        createShotEffect(clickX, clickY);
+        
+        // Calculer l'angle entre le vaisseau et le point de clic
+        const angle = calculateAngle(shipPosition.x, shipPosition.y, clickX, clickY);
+        
+        // Démarrer le tir
+        startShooting(angle);
+    }
+
+    // Fonction pour mettre à jour l'angle pendant le mouvement
+    function handleContainerMove(event) {
+        if (!isShooting || !isConnected || gameArea.classList.contains('hidden')) return;
+        
+        // Obtenir la position actuelle en pourcentage
+        const containerRect = spaceshipContainer.getBoundingClientRect();
+        let moveX, moveY;
+        
+        // Gérer à la fois les événements souris et tactiles
+        if (event.type === 'mousemove') {
+            moveX = ((event.clientX - containerRect.left) / containerRect.width) * 100;
+            moveY = ((event.clientY - containerRect.top) / containerRect.height) * 100;
+        } else if (event.type === 'touchmove') {
+            const touch = event.touches[0];
+            moveX = ((touch.clientX - containerRect.left) / containerRect.width) * 100;
+            moveY = ((touch.clientY - containerRect.top) / containerRect.height) * 100;
+        } else {
+            return; // Type d'événement non pris en charge
+        }
+        
+        // Créer un effet visuel à la nouvelle position
+        createShotEffect(moveX, moveY);
+        
+        // Calculer le nouvel angle
+        const newAngle = calculateAngle(shipPosition.x, shipPosition.y, moveX, moveY);
+        
+        // Mettre à jour l'angle de tir
+        lastShootAngle = newAngle;
+        
+        // Informer immédiatement le serveur du changement d'angle
+        if (socket && isConnected) {
+            socket.emit('rotate_shoot', { 
+                angle: newAngle,
+                firing: true
+            });
+        }
+    }
+    
+    // Ajouter les gestionnaires d'événements pour le tir par clic
+    spaceshipContainer.addEventListener('mousedown', handleContainerClick);
+    spaceshipContainer.addEventListener('mousemove', handleContainerMove); // Nouvel événement
+    spaceshipContainer.addEventListener('mouseup', stopShooting);
+    spaceshipContainer.addEventListener('mouseleave', stopShooting);
+    
+    // Support tactile
+    spaceshipContainer.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const touchEvent = {
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            type: 'touchstart'
+        };
+        handleContainerClick(touchEvent);
+    });
+    
+    spaceshipContainer.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        handleContainerMove(e);
+    });
+    
+    spaceshipContainer.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        stopShooting();
+    });
+    
+    spaceshipContainer.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        stopShooting();
+    });
+
     // Initialize the game connection
     function initConnection() {
         socket = io();
@@ -253,6 +413,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (shipObject.active_cannons !== undefined) {
                 updateActiveWeapons(shipObject.active_cannons);
             }
+        }
+
+        // Mettre à jour la position du vaisseau
+        const shipObjectPosition = sortedObjects.find(obj => obj.id === 'spaceship');
+        if (shipObjectPosition) {
+            shipPosition.x = shipObjectPosition.x;
+            shipPosition.y = shipObjectPosition.y;
         }
     }
     
@@ -756,189 +923,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Setup aim canvas
+    // Remplacer l'ancienne fonction setupAimCanvas par une fonction vide
     function setupAimCanvas() {
+        // La fonction est gardée pour éviter les erreurs mais ne fait rien
         const canvas = document.getElementById('aimCanvas');
         if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d');
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const radius = (canvas.width / 2) - 10;
-        
-        let currentAngle = 0;
-        let isFiring = false;
-        let firingInterval = null;
-        
-        // Afficher les infos sur l'arme actuelle
-        function updateWeaponInfo() {
-            const weaponInfo = {
-                1: { name: "Canon 1", color: "#2ecc71" },  // Vert
-                2: { name: "Canon 2", color: "#e74c3c" },  // Rouge
-                3: { name: "Canon 3", color: "#3498db" },  // Bleu
-                4: { name: "Canon 4", color: "#f39c12" }   // Jaune/orange
-            };
-            
-            // Ajouter le texte de l'arme
-            ctx.fillStyle = weaponInfo[currentWeapon].color;
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(weaponInfo[currentWeapon].name, centerX, centerY + 25);
-        }
-        
-        // Dessiner le cercle d'aide et la ligne de direction
-        function drawAim() {
-            // Effacer le canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Dessiner le cercle d'aide
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.strokeStyle = '#3a70d1';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            
-            // Dessiner la ligne de direction
-            const radians = currentAngle * Math.PI / 180;
-            const endX = centerX + radius * Math.cos(radians);
-            const endY = centerY + radius * Math.sin(radians);
-            
-            // Couleur basée sur l'arme sélectionnée
-            const weaponColors = {
-                1: '#2ecc71', // Vert
-                2: '#e74c3c', // Rouge
-                3: '#3498db', // Bleu
-                4: '#f39c12'  // Jaune/orange
-            };
-            
-            const lineColor = isFiring ? 
-                weaponColors[currentWeapon] : 
-                '#7a7a7a';
-            
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(endX, endY);
-            ctx.strokeStyle = lineColor;
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            // Dessiner le point au bout de la ligne
-            ctx.beginPath();
-            ctx.arc(endX, endY, 5, 0, 2 * Math.PI);
-            ctx.fillStyle = lineColor;
-            ctx.fill();
-            
-            // Dessiner l'angle en texte
-            ctx.fillStyle = '#7ab5ff';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${Math.round(currentAngle)}°`, centerX, centerY + 5);
-            
-            // Ajouter les infos sur l'arme
-            updateWeaponInfo();
-        }
-        
-        // Calculer l'angle en fonction de la position du clic
-        function calculateAngle(x, y) {
-            const dx = x - centerX;
-            const dy = y - centerY;
-            let angle = Math.atan2(dy, dx) * 180 / Math.PI;
-            if (angle < 0) angle += 360;
-            return angle;
-        }
-        
-        // Démarrer le tir
-        function startFiring() {
-            if (isFiring) return;
-            
-            isFiring = true;
-            drawAim(); // Redessiner avec la couleur de tir
-            
-            firingInterval = setInterval(() => {
-                if (socket && isConnected) {
-                    // Plus simple: envoyer l'angle et l'état du tir
-                    socket.emit('rotate_shoot', { 
-                        angle: currentAngle,
-                        firing: true
-                    });
-                }
-            }, 200);
-        }
-        
-        // Arrêter le tir
-        function stopFiring() {
-            if (!isFiring) return;
-            
-            isFiring = false;
-            clearInterval(firingInterval);
-            firingInterval = null;
-            
-            // Informer le serveur que le tir est arrêté
-            if (socket && isConnected) {
-                socket.emit('rotate_shoot', { firing: false });
-            }
-            
-            drawAim(); // Redessiner avec la couleur normale
-        }
-        
-        // Gestionnaire d'événements pour le clic sur le canvas
-        canvas.addEventListener('mousedown', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            currentAngle = calculateAngle(x, y);
-            drawAim();
-            startFiring();
-        });
-        
-        canvas.addEventListener('mousemove', function(e) {
-            if (!isFiring) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            currentAngle = calculateAngle(x, y);
-            drawAim();
-        });
-        
-        document.addEventListener('mouseup', function() {
-            stopFiring();
-        });
-        
-        // Support tactile
-        canvas.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-            
-            currentAngle = calculateAngle(x, y);
-            drawAim();
-            startFiring();
-        });
-        
-        canvas.addEventListener('touchmove', function(e) {
-            if (!isFiring) return;
-            e.preventDefault();
-            
-            const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-            
-            currentAngle = calculateAngle(x, y);
-            drawAim();
-        });
-        
-        document.addEventListener('touchend', function() {
-            stopFiring();
-        });
-        
-        // Initialiser le dessin
-        drawAim();
     }
 
     setupAimCanvas();

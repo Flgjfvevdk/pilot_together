@@ -55,9 +55,9 @@ class SpaceShip(GameObjectWithHealth):
         
         # Overheat management
         self.overheat = Overheat()
-        self.init_shield_cannon()  # Nouvelle méthode simplifiée
+        self.init_shield_cannon()
         self.heat_shoot = 3.0
-        self.heat_shield = 20.0  # Augmenté car il n'y a qu'un seul shield plus puissant
+        self.heat_shield = 20.0
 
         # Initialisation des 4 canons rotatifs (tous identiques)
         self.rotating_cannons = {}
@@ -72,13 +72,16 @@ class SpaceShip(GameObjectWithHealth):
                 projectile_width=3, projectile_height=3
             )
         
+        # Dictionnaire pour stocker les canons par joueur
+        self.player_cannons = {}
+        
         # Ajouter tous les canons aux objets liés
         for cannon in self.rotating_cannons.values():
             self.linked_game_objects.append(cannon)
             
         # Nombre de canons actifs (par défaut tous)
         self.active_cannons = 4
-
+            
     def init_space_cannons_direction(self, reload_time: float = 0.4, speed:float = 150.0) -> None:
         self.space_cannons_directions: Dict[str, SpaceCannon] = {
             'up': SpaceCannon(
@@ -88,8 +91,8 @@ class SpaceShip(GameObjectWithHealth):
                 game=self.game,
                 targets=[Tag.ENEMY],
                 reload_time=reload_time,
-                projectile_speed=speed),
-                
+                projectile_speed=speed
+            ),
             'down': SpaceCannon(
                 x=self.position.x,
                 y=self.position.y,
@@ -97,7 +100,8 @@ class SpaceShip(GameObjectWithHealth):
                 game=self.game,
                 targets=[Tag.ENEMY],
                 reload_time=reload_time,
-                projectile_speed=speed),
+                projectile_speed=speed
+            ),
             'left': SpaceCannon(
                 x=self.position.x,
                 y=self.position.y,
@@ -105,7 +109,8 @@ class SpaceShip(GameObjectWithHealth):
                 game=self.game,
                 targets=[Tag.ENEMY],
                 reload_time=reload_time,
-                projectile_speed=speed),
+                projectile_speed=speed
+            ),
             'right': SpaceCannon(
                 x=self.position.x,
                 y=self.position.y,
@@ -113,10 +118,11 @@ class SpaceShip(GameObjectWithHealth):
                 game=self.game,
                 targets=[Tag.ENEMY],
                 reload_time=reload_time,
-                projectile_speed=speed)
-        }
+                projectile_speed=speed
+            )
+        }       
         self.linked_game_objects = list(self.space_cannons_directions.values()).copy()
-
+                
     def init_shield_cannon(self) -> None:
         """Initialise un seul canon de bouclier stationnaire."""
         self.shield_cannon = ShieldCannon(
@@ -129,8 +135,8 @@ class SpaceShip(GameObjectWithHealth):
             barrier_lifespan=3.0,  
             width=24.0, 
             height=24.0 
-        )
-
+        )   
+    
     def move(self, move_vector_direction: Vector, speed: Optional[float] = None) -> bool:
         """
         Move the spaceship in the given direction.
@@ -159,6 +165,10 @@ class SpaceShip(GameObjectWithHealth):
             real_movement = new_position - old_position
             for linked_object in self.linked_game_objects:
                 linked_object.position += real_movement
+            
+            # Mettre à jour les positions des canons des joueurs également
+            for player_cannon in self.player_cannons.values():
+                player_cannon.position += real_movement
         
         return old_position != self.position
     
@@ -175,7 +185,7 @@ class SpaceShip(GameObjectWithHealth):
         if self.overheat.can_act():
             self.manage_cannon(player_keys)
             self.manage_shield(player_keys)
-            self.manage_rotate_cannon(player_keys)  # Nouveau: gère le canon rotatif
+            self.manage_rotate_cannon(player_keys)  # Gère le canon rotatif
         
         # Overheat cooling key
         cool_active = any(
@@ -250,7 +260,7 @@ class SpaceShip(GameObjectWithHealth):
         Args:
             player_keys (dict[int, dict[str, KeyTouch]]): Dictionnaire des touches des joueurs
         """
-        # Recherche un joueur qui tire avec le canon rotatif
+        # Traiter tous les joueurs qui tirent, pas seulement le premier
         for player_id, keys in player_keys.items():
             if (keys.get('shoot') and keys.get('shoot').is_active() and 
                 keys.get('angle') is not None):
@@ -268,8 +278,23 @@ class SpaceShip(GameObjectWithHealth):
                 
                 # Ne tirer que si au moins un canon est actif
                 if self.active_cannons > 0:
-                    # Récupérer le canon correspondant à l'arme
-                    cannon = self.rotating_cannons[weapon]
+                    # Utiliser un canon spécifique au joueur plutôt qu'un partagé
+                    player_canon_key = f"{player_id}_{weapon}"
+                    
+                    # Si ce joueur n'a pas encore de canon attribué pour cette arme, en créer un
+                    if player_canon_key not in self.player_cannons:
+                        self.player_cannons[player_canon_key] = SpaceCannon(
+                            x=self.position.x, y=self.position.y,
+                            direction=Vector(1, 0),
+                            game=self.game,
+                            reload_time=self.reload_time,
+                            projectile_speed=self.projectile_speed,
+                            img_url='/static/img/green.png',
+                            projectile_width=3, projectile_height=3
+                        )
+                    
+                    # Récupérer le canon du joueur
+                    cannon = self.player_cannons[player_canon_key]
                     
                     # Mettre à jour la direction du canon
                     dir_vec = Vector.from_angle(math.radians(angle))
@@ -283,9 +308,7 @@ class SpaceShip(GameObjectWithHealth):
                     if has_shot:
                         # Même chaleur générée pour tous les canons
                         self.overheat.add_heat(self.heat_shoot)
-                
-                break
-
+    
     def set_active_cannons(self, count: int) -> None:
         """
         Définit le nombre de canons actifs sur le vaisseau.
@@ -303,7 +326,7 @@ class SpaceShip(GameObjectWithHealth):
         # Journaliser le changement
         import logging
         logging.info(f"Spaceship active cannons set to {self.active_cannons}")
-
+        
     def getHit(self, damage: float) -> float:
         """
         Apply damage to the spaceship and emit a health update event.
@@ -325,9 +348,9 @@ class SpaceShip(GameObjectWithHealth):
                 }
             }
             self.socketio.emit('spaceship_health_update', health_data)
-        
+            
         return remaining_health
-
+    
     def repair(self) -> float:
         """
         Heal the spaceship and emit a health update event.
@@ -342,7 +365,7 @@ class SpaceShip(GameObjectWithHealth):
             }
             self.socketio.emit('spaceship_health_update', health_data)
         return new_health
-
+    
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert the spaceship data to a dictionary for sending to clients.
