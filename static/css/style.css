@@ -158,10 +158,11 @@ button:hover {
 .controls.first-row {
     flex-wrap: nowrap;
     justify-content: space-between;
+    gap: 10px;
 }
 
 .controls.first-row .controls-section {
-    width: 48%;  /* Deux sections égales au lieu de trois */
+    min-width: 0;
 }
 
 .controls.second-row {
@@ -172,6 +173,13 @@ button:hover {
 .controls.second-row .controls-section {
     width: auto;
     flex: 0 0 auto;
+}
+
+/* Ajout de styles pour la nouvelle ligne d'utilitaires */
+.controls.utility-row {
+    justify-content: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 .controls-section {
@@ -185,6 +193,33 @@ button:hover {
 .controls-section.cool-controls {
     flex-basis: 100%;   /* Occupe toute la ligne, shield tombera en dessous */
     width: 100%;        /* Assure 100% de largeur */
+}
+
+.controls-section.utility-controls {
+    width: auto;
+    margin: 0 auto;
+    padding: 5px 15px;
+    background-color: #1a243a;
+    border-radius: 8px;
+    border: 1px solid #3a70d1;
+}
+
+.controls-section.utility-controls h3 {
+    text-align: center;
+}
+
+.utility-controls .control-row {
+    display: flex;
+    gap: 15px; /* Plus d'espace entre les boutons */
+    justify-content: center;
+    margin-top: 5px;
+}
+
+.utility-controls .control-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    min-width: unset;
 }
 
 .controls-section.utility-controls {
@@ -247,6 +282,78 @@ button:hover {
     background-color: #3a70d1;
     color: white;
     transform: scale(0.95);
+}
+
+/* Amélioration des contrôles pour les appareils mobiles */
+.controls-section.movement-controls {
+    width: 40% !important;  /* Élargir la section de mouvements */
+}
+
+.controls-section.movement-controls .control-btn {
+    width: 60px;           /* Taille fixe plus grande au lieu d'un pourcentage */
+    height: 60px;          /* Hauteur fixe pour garantir des boutons carrés */
+    min-width: 60px;       /* S'assurer d'une largeur minimale */
+    max-width: none;       /* Supprimer la limite de taille maximale */
+    font-size: 28px;       /* Police plus grande pour les flèches */
+    margin: 5px;           /* Ajouter de la marge pour séparer les boutons */
+    border-width: 3px;     /* Bordure plus épaisse */
+    border-radius: 12px;   /* Coins plus arrondis */
+    touch-action: manipulation;  /* Optimisation pour les écrans tactiles */
+    -webkit-tap-highlight-color: transparent;  /* Supprimer la surbrillance sur tap */
+}
+
+/* Réduire l'espacement entre les touches de déplacement */
+.movement-controls .control-row {
+    margin: 2px 0;        /* Moins d'espace vertical entre les rangées */
+    display: flex;
+    justify-content: center;
+    gap: 2px;             /* Espace minimal entre les boutons */
+}
+
+/* Style spécifique pour le bouton haut/bas */
+.movement-controls .control-row:first-child,
+.movement-controls .control-row:last-child {
+    display: flex;
+    justify-content: center;
+}
+
+/* Touches gauche/droite plus proches */
+.movement-controls .control-row:nth-child(2) {
+    justify-content: center; /* Centrer au lieu de space-around */
+    gap: 4px;               /* Réduire de 15px à 4px */
+}
+
+/* Media queries pour les appareils mobiles */
+@media (max-width: 767px) {
+    .controls.first-row {
+        flex-direction: row; /* Forcer côte à côte même sur petits écrans */
+        flex-wrap: nowrap !important;
+    }
+    
+    .controls-section.movement-controls {
+        width: 48% !important; /* Au lieu de 100% */
+        margin-right: 4px;
+    }
+    
+    .controls-section.aim-controls {
+        width: 48% !important; /* Au lieu de 100% */
+    }
+    
+    /* Réduire encore plus l'espacement sur mobile */
+    .movement-controls .control-row:nth-child(2) {
+        gap: 2px;
+    }
+    
+    /* Ajuster la taille du canvas de visée pour qu'il s'adapte */
+    .aim-container {
+        width: 100%;
+        height: auto;
+    }
+    
+    #aimCanvas {
+        width: 100%;
+        height: auto;
+    }
 }
 
 /* Shooting buttons styling */
